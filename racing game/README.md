@@ -1,7 +1,7 @@
 # School Racing Sim
 
 A browser racing simulator for classroom use. Sim-style handling (weight transfer, slip-curve tyres,
-friction circle, aero, surface grip), five real-inspired circuits, Formula and GT disciplines, AI grids with
+friction circle, aero, surface grip), six real-inspired circuits, Formula and GT disciplines, AI grids with
 four difficulty levels, qualifying-style time trial with ghost laps, a data-driven career season, flags,
 static wet/dry weather, procedural engine/tyre/impact sound, five cameras (cockpit with a working wheel,
 dash and live rear-view mirror), class-code student accounts, and room-code multiplayer.
@@ -30,6 +30,7 @@ render.yaml         one-click Render blueprint
 | `Space` | handbrake |
 | `C` | cycle camera: Chase → Cockpit → Hood → TV Broadcast → Trackside free cam |
 | `R` | recover the car back onto the track |
+| `M` | sound on / off (**off by default**) |
 | `Esc` / `P` | pause menu |
 
 Free cam (spectators / trackside view): `W A S D` move, arrows look, `Q`/`E` down/up.
@@ -103,6 +104,10 @@ spline, sampled every ~4 m. From the samples the game derives the racing line, p
 spots. Layouts are modelled from public knowledge of each circuit's corner sequence at roughly half scale —
 no scanned or game-extracted data. Add a track by adding an entry; nothing else changes.
 
+The six circuits: a training oval, Monza (straights + chicanes), Spa (elevation, Eau Rouge, La Source),
+Silverstone (flowing esses), Nurburgring GP (technical), and **Alpenring** - a power circuit with three
+very long climbing/descending straights and only six corners, the highest average speed of the set.
+
 **Scenery** (`world.js`) — a heightfield terrain that follows track elevation, procedural grass/asphalt/gravel
 textures with normal maps, kerbs, edge lines, armco with posts, catch fencing, tyre walls on the tight
 corners, advertising boards, brake markers, three grandstands with instanced crowds, a pit complex, a bridge,
@@ -140,6 +145,7 @@ progress and best laps; the leaderboard is per track/discipline. Guests get the 
 
 ## Tuning after the first playtest
 
+- Sound is off until the player presses `M` or ticks Sound in Settings (`Audio.muted`).
 - Handling feel: `CARS.*` (mass, `frontBias`, `cgH`, `maxSteer`, `brakeForce`, `aeroDown`, `dragCoef`)
   and `TYRE.*` (`peakSlip`, `muPeak`, `falloff`).
 - AI pace: `DIFF.*.pace` is a multiplier on the track's target speeds; `latAccel`/`brakeDecel` in the

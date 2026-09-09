@@ -36,7 +36,7 @@ function makeCode() {
 function sanitizeSettings(s = {}) {
   const modes = ['f1', 'gt'];
   const diffs = ['easy', 'medium', 'hard', 'pro'];
-  const tracks = ['testoval', 'monza', 'spa', 'silverstone', 'nurburgring'];
+  const tracks = ['testoval', 'monza', 'spa', 'silverstone', 'nurburgring', 'alpenring'];
   return {
     trackId: tracks.includes(s.trackId) ? s.trackId : 'testoval',
     mode: modes.includes(s.mode) ? s.mode : 'gt',

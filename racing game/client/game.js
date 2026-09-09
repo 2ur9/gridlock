@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import * as THREE from 'three';
-import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=9';
+import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=10';
 
 /* ---------- error surface ---------------------------------------------------- */
 const errBox = document.getElementById('err');
@@ -264,6 +264,36 @@ const TRACK_DEFS = {
     ],
     runoff: 11, sectors: [0.33, 0.66],
     drs: [[0.42, 0.10], [0.62, 0.12]], gravel: [[0.30, 0.04], [0.56, 0.04]],
+  },
+
+  alpenring: {
+    // Power circuit: three very long full-throttle straights up and over a hill, linked by
+    // only six corners - fast ones, bar the tight right at the summit. Red Bull Ring in character.
+    name: 'Alpenring Speedway (inspired)', country: 'Austria', tint: 0x2f6b3a,
+    pts: [
+      [0, 0, 15, 0, 0],            // start / finish
+      [0, 100, 15, 0, 4],
+      [0, 190, 15, 0, 8],          // long pit straight, climbing - flat out
+      [16, 244, 14, 0.08, 11],     // T1 - medium right, uphill braking
+      [70, 272, 14, 0.05, 13],
+      [150, 288, 15, 0, 17],       // the long climb - flat out
+      [240, 296, 15, 0, 21],
+      [305, 278, 14, 0.07, 24],    // T2 - fast right
+      [345, 234, 13, 0.10, 26],    // T3 - tight right at the summit
+      [348, 178, 14, 0.05, 25],
+      [330, 110, 15, 0, 21],       // long downhill back straight - fastest point
+      [300, 20, 15, 0, 15],
+      [278, -60, 15, 0, 9],
+      [262, -124, 13, 0.08, 6],    // T4 - right
+      [220, -168, 13, 0.05, 4],
+      [160, -188, 14, -0.04, 3],   // T5 - fast left kink
+      [90, -188, 14, 0.06, 2],
+      [36, -160, 13, 0.08, 1],     // T6 - right, on to the pit straight
+      [8, -110, 14, 0.04, 0],
+      [0, -55, 15, 0, 0],
+    ],
+    runoff: 13, sectors: [0.34, 0.66],
+    drs: [[0.84, 0.20], [0.22, 0.18], [0.50, 0.16]], gravel: [[0.13, 0.03], [0.42, 0.03]],
   },
 
   nurburgring: {

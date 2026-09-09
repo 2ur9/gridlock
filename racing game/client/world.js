@@ -308,6 +308,20 @@ export class Terrain {
         if (d <= hw + 1.6) e = sm.y + bankY - 0.1;
         else if (dOut <= 6) e = sm.y + bankY;
         else { const w = 1 - smoothstep(6, 300, dOut); e = sm.y * w + (meanY + hills(x, z)) * (1 - w) + micro(x, z) * smoothstep(6, 40, dOut); }
+        // Hard guarantee: near the circuit the ground can never rise above the tarmac.
+        // The grid is coarse (6-12 m) next to a ~13 m road, so without this the interpolated
+        // terrain pokes through the road surface and you get grass growing on the racing line.
+        if (dOut < 30) {
+          const along = (x - sm.pos.x) * sm.tan.x + (z - sm.pos.z) * sm.tan.z;
+          const nb = S[(best + (along >= 0 ? 1 : -1) + S.length) % S.length];
+          const grade = (nb.y - sm.y) / Math.max(0.1, sm.pos.distanceTo(nb.pos));
+          const roadY = sm.y + grade * Math.abs(along) + Math.sin(sm.bank) * clamp(lat, -hw, hw) + 0.02;
+          // generous margin: this analytic estimate can't match the drawn ribbon exactly, and the
+          // grid is far coarser than the road is wide. A verge sitting below the tarmac lip is
+          // what real circuits look like anyway.
+          const margin = 0.30 * (1 - smoothstep(0, 30, Math.max(0, dOut)));
+          e = Math.min(e, roadY - 0.06 - margin);
+        }
         const idx = iz * nx + ix;
         this.h[idx] = e; this.dist[idx] = dOut;
         // colour: mown light grass near the track, darker further out, sandy in gravel traps
@@ -481,7 +495,14 @@ export function buildWorld(track, scene, quality, weather) {
     const g = new THREE.Group();
     const span = sf.width + 8;
     const beam = new THREE.Mesh(new THREE.BoxGeometry(span, 1.1, 1.1), steel); beam.position.y = 7; g.add(beam);
-    for (const s of [1, -1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(0.7, 7.5, 0.7), steel); post.position.set(s * span / 2, 3.75, 0); g.add(post); }
+    for (const s of [1, -1]) {
+      // stand each leg on the actual ground under it, so posts never float or sink into a slope
+      const foot = sf.pos.clone().addScaledVector(sf.left, s * span / 2);
+      const drop = sf.y - groundY(foot.x, foot.z);
+      const h = 7 + Math.max(0, drop);
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.7, h, 0.7), steel);
+      post.position.set(s * span / 2, 7 - h / 2, 0); g.add(post);
+    }
     const board = new THREE.Mesh(new THREE.PlaneGeometry(span - 2, 1.5), new THREE.MeshStandardMaterial({ map: Tex.ad(AD_TEXTS[0][0], AD_TEXTS[0][1], AD_TEXTS[0][2]), roughness: 0.7 }));
     board.position.set(0, 8.4, -0.3); board.rotation.y = Math.PI; g.add(board);
     const board2 = board.clone(); board2.position.z = 0.3; board2.rotation.y = 0; g.add(board2);
@@ -653,16 +674,24 @@ export function buildWorld(track, scene, quality, weather) {
     const wallGeo = ribbon(track, (sm) => ({ off: sm.width / 2 + 2.2 }), (sm) => ({ off: sm.width / 2 + 2.6 }), { yOff: 0.0 });
     // ribbon() builds the full loop; instead build a short local wall from boxes
     void wallGeo;
+    // pit wall: set back beyond the kerb + a margin, never overhanging the circuit
+    const wallLat = (sm) => sm.width / 2 + 5.5;
     for (let k = 0; k < cnt; k += Math.max(1, Math.round(4 / step))) {
       const sm = S[(i0 + k) % N];
-      const p = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 2.4);
-      const w = new THREE.Mesh(new THREE.BoxGeometry(4.1, 1.15, 0.4), conc); w.position.set(p.x, sm.y + 0.57, p.z); w.rotation.y = Math.atan2(sm.tan.x, sm.tan.z); w.castShadow = true; scene.add(w);
-      if (k % Math.max(1, Math.round(16 / step)) === 0) { const gantry = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x2b2f35, roughness: 0.6 })); gantry.position.set(p.x, sm.y + 2.3, p.z); gantry.rotation.y = w.rotation.y; scene.add(gantry); }
+      const p = sm.pos.clone().addScaledVector(sm.left, wallLat(sm));
+      const yaw = Math.atan2(sm.tan.x, sm.tan.z);
+      const w = new THREE.Mesh(new THREE.BoxGeometry(4.1, 1.15, 0.4), conc); w.position.set(p.x, sm.y + 0.57, p.z); w.rotation.y = yaw; w.castShadow = true; scene.add(w);
+      // advertising panel sitting ON the wall (was a slab hovering 1.2 m in mid-air beside the track)
+      if (k % Math.max(1, Math.round(12 / step)) === 0) {
+        const t = AD_TEXTS[(k + 3) % AD_TEXTS.length];
+        const panel = new THREE.Mesh(new THREE.PlaneGeometry(4, 0.8), new THREE.MeshStandardMaterial({ map: Tex.ad(t[0], t[1], t[2]), roughness: 0.7, side: THREE.DoubleSide }));
+        panel.position.set(p.x, sm.y + 0.72, p.z); panel.rotation.y = yaw + Math.PI / 2; scene.add(panel);
+      }
     }
     // pit lane surface
     const laneGeo = (() => {
       const v = [], uv = [], idx = [];
-      for (let k = 0; k <= cnt; k++) { const sm = S[(i0 + k) % N]; const a = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 3.0), b = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 13); v.push(a.x, sm.y + 0.02, a.z, b.x, sm.y + 0.02, b.z); uv.push(0, sm.s / 5, 2, sm.s / 5); }
+      for (let k = 0; k <= cnt; k++) { const sm = S[(i0 + k) % N]; const a = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 6.2), b = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 16); v.push(a.x, sm.y + 0.02, a.z, b.x, sm.y + 0.02, b.z); uv.push(0, sm.s / 5, 2, sm.s / 5); }
       for (let k = 0; k < cnt; k++) { const A = k * 2, B = A + 2; idx.push(A, A + 1, B, B, A + 1, B + 1); }
       const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g;
     })();
@@ -687,7 +716,7 @@ export function buildWorld(track, scene, quality, weather) {
     const col = new THREE.Color();
     for (let k = 0; k < roofPeople; k++) { col.setHSL(rng(), 0.6, 0.5); placeInstance(rc, k, (rng() - 0.5) * (len - 4), 9.95, 4 + rng() * 3, rng() * 6, 1, 1.1, 1, col); }
     b.add(rc);
-    const p = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 21);
+    const p = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 24);
     b.position.set(p.x, sm.y, p.z); b.rotation.y = Math.atan2(sm.tan.x, sm.tan.z) - Math.PI / 2;   // garages face the pit lane / track
     scene.add(b);
   }

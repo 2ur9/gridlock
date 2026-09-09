@@ -16,6 +16,7 @@ const LAP_FLOOR = {
   spa:         { f1: 44_000, gt: 55_000 },
   silverstone: { f1: 38_000, gt: 47_000 },
   nurburgring: { f1: 38_000, gt: 48_000 },
+  alpenring:   { f1: 36_000, gt: 45_000 },
 };
 const LAP_CEIL = 20 * 60_000; // 20 min — clearly not a real flying lap
 
