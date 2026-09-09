@@ -580,7 +580,7 @@ class Vehicle {
       thr = this.thrActual = clamp(this.thrActual + clamp(inp.throttle - this.thrActual, -9 * dt, 3.2 * dt), 0, 1);
       brk = this.brkActual = clamp(this.brkActual + clamp(inp.brake - this.brkActual, -9 * dt, 1.7 * dt), 0, 1);
       // reverse: holding the brake at a standstill backs the car up; the throttle then brakes you to a stop
-      if (!this.reversing && brk > 0.05 && thr < 0.05 && this.vx < 0.5 && this.vx > -0.5) this.reversing = true;
+      if (!this.reversing && env.racing && inp.brake > 0.5 && inp.throttle < 0.05 && this.vx < 0.5 && this.vx > -0.5) this.reversing = true;
       if (this.reversing && ((thr > 0.05 && Math.abs(this.vx) < 0.3) || this.vx > 1.5)) this.reversing = false;
     } else { thr = inp.throttle; brk = inp.brake; this.reversing = false; }
     const drivePedal = this.reversing ? brk : thr;
@@ -1442,6 +1442,7 @@ class Game {
     }
 
     const racing = g.raceState === 'green' || g.raceState === 'finishing';
+    g.env.racing = racing;   // reverse gear etc. only once the lights are out
 
     // DRS check for player (F1)
     if (MODES[g.settings.mode].drs && racing) {
@@ -1745,8 +1746,10 @@ class Game {
     const camTarget = this.spectator ? (this.cars[0] || this.player) : this.player;
     this.rig.update(dt, camTarget, this.track, this.rig.mode === 'free' ? this.freeCamInput() : null);
 
-    // audio + hud
-    this.audio.update(this.player, dt);
+    // audio: only while actually racing — never during the countdown, results screen,
+    // or the trailing post-sim frame after the race ends
+    if (this.raceState === 'green' || this.raceState === 'finishing') this.audio.update(this.player, dt);
+    else this.audio.silence();
     this.hud.tick(dt);
     this.hud.update(this);
 
