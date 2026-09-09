@@ -179,13 +179,15 @@
       <p class="sub" id="setupSub"></p>
       <div class="grid">
         <label class="field">Track<select id="selTrack"></select></label>
-        <label class="field">Discipline<select id="selMode"><option value="gt">GT</option><option value="f1">Formula</option></select></label>
+        <label class="field">Discipline<select id="selMode"><option value="gt">GT / Sports</option><option value="f1">Formula</option></select></label>
+        <label class="field">Car<select id="selCar"></select></label>
         <label class="field">Weather<select id="selWx"><option value="dry">Dry</option><option value="wet">Wet</option></select></label>
         <label class="field" id="fLaps">Laps<input type="number" id="selLaps" min="1" max="30" value="3" /></label>
         <label class="field" id="fAi">AI cars<input type="number" id="selAi" min="0" max="15" value="7" /></label>
         <label class="field" id="fDiff">AI level<select id="selDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="pro">Pro</option></select></label>
       </div>
-      <div class="row" style="margin-top:10px">
+      <p class="sub" id="setupCarBlurb" style="margin-top:8px"></p>
+      <div class="row" style="margin-top:6px">
         <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="selPractice" style="width:auto" /> Practice mode <span class="tag">no timing pressure / penalties</span></label>
       </div>
       <div class="btnrow">
@@ -204,6 +206,7 @@
       <div class="grid">
         <label class="field">Season<select id="selSeason"></select></label>
         <label class="field">AI level (whole season)<select id="selSeasonDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="pro">Pro</option></select></label>
+        <label class="field">Your car for sports rounds<select id="selCareerCar"></select></label>
         <div class="field" style="justify-content:flex-end"><button class="ghost" id="btnCareerReset">Reset progress</button></div>
       </div>
       <h2>Calendar</h2>
@@ -230,7 +233,8 @@
         <h2>Host a race</h2>
         <div class="grid">
           <label class="field">Track<select id="mpTrack"></select></label>
-          <label class="field">Discipline<select id="mpMode"><option value="gt">GT</option><option value="f1">Formula</option></select></label>
+          <label class="field">Discipline<select id="mpMode"><option value="gt">GT / Sports</option><option value="f1">Formula</option></select></label>
+          <label class="field">Your car<select id="mpCar"></select></label>
           <label class="field">Weather<select id="mpWx"><option value="dry">Dry</option><option value="wet">Wet</option></select></label>
           <label class="field">Laps<input type="number" id="mpLaps" min="1" max="30" value="3" /></label>
           <label class="field">AI cars<input type="number" id="mpAi" min="0" max="15" value="4" /></label>

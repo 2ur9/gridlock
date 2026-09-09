@@ -40,6 +40,7 @@ function sanitizeSettings(s = {}) {
   return {
     trackId: tracks.includes(s.trackId) ? s.trackId : 'testoval',
     mode: modes.includes(s.mode) ? s.mode : 'gt',
+    car: ['f1', 'gt', 'gt3', 'hyper', 'lmh'].includes(s.car) ? s.car : 'gt',
     laps: Math.min(30, Math.max(1, Math.round(s.laps) || 3)),
     aiCount: Math.min(15, Math.max(0, Math.round(s.aiCount) ?? 5)),
     aiDifficulty: diffs.includes(s.aiDifficulty) ? s.aiDifficulty : 'medium',
@@ -217,7 +218,7 @@ export function attachRooms(io) {
       const v = msg.v || [0, 0, 0];
       const speed = Math.hypot(v[0], v[1], v[2]);
       if (speed > MAX_SPEED_MS) { v[0] *= MAX_SPEED_MS / speed; v[1] *= MAX_SPEED_MS / speed; v[2] *= MAX_SPEED_MS / speed; }
-      p.car = { p: msg.p, q: msg.q, v, rpm: msg.rpm | 0, gear: msg.gear | 0, steer: msg.steer || 0 };
+      p.car = { p: msg.p, q: msg.q, v, rpm: msg.rpm | 0, gear: msg.gear | 0, steer: msg.steer || 0, car: String(msg.car || '').slice(0, 8) };
       p.trackProgress = Number(msg.progress) || 0;
       p.lastCarAt = Date.now();
       if (room.hostId === socket.id && Array.isArray(msg.ai)) room.aiCars = msg.ai.slice(0, 15);

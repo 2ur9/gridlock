@@ -298,11 +298,15 @@ export class Terrain {
         for (let i = 0; i < S.length; i += stride) { const dx = S[i].pos.x - x, dz = S[i].pos.z - z; const dd = dx * dx + dz * dz; if (dd < bd) { bd = dd; best = i; } }
         for (let k = -stride; k <= stride; k++) { const i = (best + k + S.length) % S.length; const dx = S[i].pos.x - x, dz = S[i].pos.z - z; const dd = dx * dx + dz * dz; if (dd < bd) { bd = dd; best = i; } }
         const sm = S[best]; const d = Math.sqrt(bd);
-        const wall = sm.width * 0.5 + (sm.runoff ?? track.runoff);
+        const hw = sm.width * 0.5;
+        const wall = hw + (sm.runoff ?? track.runoff);
         const dOut = d - wall;
+        // follow the road's banking under and beside it, fading out by the barrier
+        const lat = (x - sm.pos.x) * sm.left.x + (z - sm.pos.z) * sm.left.z;
+        const bankY = Math.sin(sm.bank) * clamp(lat, -hw, hw) * (1 - smoothstep(hw + 1.6, wall, d));
         let e;
-        if (d <= sm.width * 0.5 + 1.6) e = sm.y - 0.06;
-        else if (dOut <= 6) e = sm.y;
+        if (d <= hw + 1.6) e = sm.y + bankY - 0.1;
+        else if (dOut <= 6) e = sm.y + bankY;
         else { const w = 1 - smoothstep(6, 300, dOut); e = sm.y * w + (meanY + hills(x, z)) * (1 - w) + micro(x, z) * smoothstep(6, 40, dOut); }
         const idx = iz * nx + ix;
         this.h[idx] = e; this.dist[idx] = dOut;
@@ -1119,6 +1123,161 @@ function buildGTProcedural(livery) {
   return g;
 }
 
+/* ---- road/prototype racers: lofted bodies with painted liveries ---- */
+
+/** Cabin texture: paint on the roof (v .38-.62), dark glass on the sides/front/rear. */
+function cabinTex(livery) {
+  const W = 256, H = 256; const c = cv(W, H); const x = c.getContext('2d');
+  x.fillStyle = '#0e1418'; x.fillRect(0, 0, W, H);
+  x.fillStyle = livery.base || '#d21f3c'; x.fillRect(0, H * 0.4, W, H * 0.2);
+  x.fillStyle = 'rgba(255,255,255,0.10)'; x.fillRect(0, H * 0.2, W, H * 0.08); x.fillRect(0, H * 0.72, W, H * 0.08); // window tint highlights
+  x.fillStyle = '#0b0d10'; x.fillRect(0, 0, W, H * 0.12); x.fillRect(0, H * 0.88, W, H * 0.12);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; return t;
+}
+
+function roadWheel(r, w, rimTex) {
+  const geo = new THREE.CylinderGeometry(r, r, w, 28);
+  const rim = new THREE.MeshStandardMaterial({ map: rimTex, roughness: 0.35, metalness: 0.8 });
+  const m = new THREE.Mesh(geo, [MAT.rubber(), rim, rim]); m.rotation.z = Math.PI / 2; m.castShadow = true;
+  const pivot = new THREE.Group(); pivot.add(m); pivot.rotation.order = 'YXZ';
+  return pivot;
+}
+
+function commonRacerBits(g, livery, add, opts) {
+  const carbon = MAT.carbon();
+  const accent = paint(livery.accent || '#ffffff');
+  const { wheelX, wheelZf, wheelZr, wheelR = 0.35, wheelW = 0.32, mirrorY = 0.95, mirrorZ = 0.75, decalY = 0.7, decalX = 0.99 } = opts;
+  const rimTex = Tex.rim();
+  const wheels = [];
+  for (const [x, z] of [[-wheelX, wheelZf], [wheelX, wheelZf], [-wheelX, wheelZr], [wheelX, wheelZr]]) { const w = roadWheel(wheelR, wheelW, rimTex); w.position.set(x, wheelR, z); g.add(w); wheels.push(w); }
+  g.userData.wheels = wheels;
+  for (const s of [-1, 1]) {
+    add(new THREE.CylinderGeometry(0.012, 0.012, 0.16, 6), carbon, s * (wheelX - 0.02), mirrorY - 0.02, mirrorZ, 0, 0, s * 1.2);
+    add(new RoundedBoxGeometry(0.16, 0.07, 0.08, 2, 0.02), carbon, s * (wheelX + 0.1), mirrorY + 0.03, mirrorZ);
+    const dd = decal(livery, 0.46); dd.position.set(s * decalX, decalY, 0.2); dd.rotation.y = s * Math.PI / 2; g.add(dd);
+  }
+  return { carbon, accent };
+}
+
+function buildGT3(livery) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshPhysicalMaterial({ map: f1BodyLivery(livery, 'body'), metalness: 0.35, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.08 });
+  const add = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; g.add(m); return m; };
+  const body = new THREE.Mesh(loft([
+    { z: 2.4, wb: 1.5, wt: 1.15, h: 0.28, y: 0.42, n: 4 },
+    { z: 1.9, wb: 1.86, wt: 1.6, h: 0.5, y: 0.5, n: 4.5 },
+    { z: 1.1, wb: 1.96, wt: 1.76, h: 0.6, y: 0.56, n: 5 },
+    { z: 0.2, wb: 1.98, wt: 1.82, h: 0.66, y: 0.58, n: 5 },
+    { z: -1.0, wb: 1.98, wt: 1.82, h: 0.64, y: 0.58, n: 5 },
+    { z: -1.9, wb: 1.92, wt: 1.7, h: 0.58, y: 0.6, n: 4.5 },
+    { z: -2.4, wb: 1.62, wt: 1.3, h: 0.42, y: 0.62, n: 4 },
+  ], 36), bodyMat); body.castShadow = true; g.add(body);
+  const cabin = new THREE.Mesh(loft([
+    { z: 1.0, wb: 1.64, wt: 1.34, h: 0.06, y: 0.9, n: 4 },
+    { z: 0.45, wb: 1.6, wt: 1.24, h: 0.44, y: 1.07, n: 4 },
+    { z: -0.35, wb: 1.6, wt: 1.2, h: 0.5, y: 1.11, n: 4 },
+    { z: -1.05, wb: 1.54, wt: 1.14, h: 0.36, y: 1.02, n: 4 },
+    { z: -1.5, wb: 1.44, wt: 1.04, h: 0.06, y: 0.9, n: 4 },
+  ], 32), new THREE.MeshPhysicalMaterial({ map: cabinTex(livery), metalness: 0.3, roughness: 0.25, clearcoat: 0.8 }));
+  cabin.castShadow = true; cabin.userData.hideInCockpit = true; g.add(cabin);
+  const { carbon, accent } = commonRacerBits(g, livery, add, { wheelX: 0.88, wheelZf: 1.45, wheelZr: -1.45, wheelR: 0.35, wheelW: 0.33, mirrorY: 0.98, mirrorZ: 0.8, decalY: 0.68, decalX: 1.0 });
+  // splitter, dive planes, side skirts, diffuser
+  add(new THREE.BoxGeometry(2.05, 0.03, 0.55), carbon, 0, 0.2, 2.35);
+  for (const s of [-1, 1]) { add(new THREE.BoxGeometry(0.22, 0.02, 0.16), accent, s * 0.9, 0.5, 2.3, 0, s * 0.3, 0); add(new THREE.BoxGeometry(0.12, 0.05, 2.4), carbon, s * 1.0, 0.24, 0); }
+  add(new THREE.BoxGeometry(1.8, 0.26, 0.5), carbon, 0, 0.3, -2.35, -0.3);
+  for (const xx of [-0.6, -0.2, 0.2, 0.6]) add(new THREE.BoxGeometry(0.015, 0.28, 0.5), carbon, xx, 0.36, -2.35, -0.3);
+  // rear wing on swan necks
+  add(wingGeo(0.34, 0.03, 0.05, 1.8), accent, 0, 1.18, -2.25, -0.2);
+  for (const s of [-1, 1]) { add(new THREE.BoxGeometry(0.02, 0.32, 0.42), carbon, s * 0.92, 1.12, -2.25); add(new THREE.BoxGeometry(0.03, 0.4, 0.28), carbon, s * 0.5, 0.98, -2.05, 0.5); }
+  // lights, roof scoop, exhaust, hood decal
+  for (const s of [-1, 1]) { add(new RoundedBoxGeometry(0.4, 0.13, 0.08, 2, 0.04), MAT.headLight(), s * 0.62, 0.62, 2.42, 0, s * -0.35, 0); add(new RoundedBoxGeometry(0.55, 0.08, 0.05, 2, 0.02), MAT.redLight(), s * 0.5, 0.78, -2.62); add(new THREE.CylinderGeometry(0.045, 0.045, 0.2, 8), MAT.chrome(), s * 0.3, 0.32, -2.6, Math.PI / 2, 0, 0); }
+  add(new RoundedBoxGeometry(0.3, 0.06, 0.2, 2, 0.02), carbon, 0, 1.36, -0.6);
+  const d = decal(livery, 0.55); d.position.set(0, 0.905, 1.5); d.rotation.x = -Math.PI / 2 + 0.06; g.add(d);
+  g.userData.eye = new THREE.Vector3(-0.38, 1.0, 0.1);
+  g.userData.kind = 'gt';
+  return g;
+}
+
+function buildHyper(livery) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshPhysicalMaterial({ map: f1BodyLivery(livery, 'pod'), metalness: 0.5, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.05 });
+  const add = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; g.add(m); return m; };
+  const body = new THREE.Mesh(loft([
+    { z: 2.5, wb: 1.5, wt: 1.05, h: 0.2, y: 0.34, n: 3.5 },
+    { z: 1.8, wb: 1.9, wt: 1.5, h: 0.4, y: 0.44, n: 4 },
+    { z: 1.0, wb: 2.02, wt: 1.62, h: 0.5, y: 0.5, n: 4.5 },
+    { z: 0.0, wb: 2.04, wt: 1.72, h: 0.56, y: 0.52, n: 4.5 },
+    { z: -1.0, wb: 2.04, wt: 1.78, h: 0.6, y: 0.54, n: 4.5 },
+    { z: -1.9, wb: 1.98, wt: 1.62, h: 0.56, y: 0.56, n: 4 },
+    { z: -2.45, wb: 1.7, wt: 1.2, h: 0.4, y: 0.5, n: 3.5 },
+  ], 36), bodyMat); body.castShadow = true; g.add(body);
+  const cabin = new THREE.Mesh(loft([
+    { z: 1.05, wb: 1.3, wt: 1.0, h: 0.05, y: 0.78, n: 3 },
+    { z: 0.45, wb: 1.36, wt: 0.92, h: 0.42, y: 0.95, n: 3.5 },
+    { z: -0.3, wb: 1.3, wt: 0.8, h: 0.44, y: 0.98, n: 3.5 },
+    { z: -1.0, wb: 1.1, wt: 0.5, h: 0.3, y: 0.9, n: 3 },
+    { z: -1.9, wb: 0.7, wt: 0.2, h: 0.12, y: 0.78, n: 3 },
+  ], 32), new THREE.MeshPhysicalMaterial({ map: cabinTex(livery), metalness: 0.3, roughness: 0.25, clearcoat: 0.8 }));
+  cabin.castShadow = true; cabin.userData.hideInCockpit = true; g.add(cabin);
+  const { carbon, accent } = commonRacerBits(g, livery, add, { wheelX: 0.9, wheelZf: 1.5, wheelZr: -1.5, wheelR: 0.35, wheelW: 0.34, mirrorY: 0.86, mirrorZ: 0.85, decalY: 0.6, decalX: 1.03 });
+  // shark fin, rear wing on tall endplates, diffuser, splitter, roof scoop, slim lights
+  add(new THREE.BoxGeometry(0.03, 0.32, 1.5), paint(livery.base), 0, 1.02, -1.55);
+  add(wingGeo(0.32, 0.03, 0.05, 1.7), accent, 0, 1.12, -2.25, -0.22);
+  for (const s of [-1, 1]) { add(new THREE.BoxGeometry(0.02, 0.5, 0.5), carbon, s * 0.86, 0.94, -2.25); }
+  add(new THREE.BoxGeometry(1.9, 0.2, 0.55), carbon, 0, 0.28, -2.4, -0.4);
+  for (const xx of [-0.7, -0.35, 0, 0.35, 0.7]) add(new THREE.BoxGeometry(0.015, 0.3, 0.55), carbon, xx, 0.34, -2.4, -0.4);
+  add(new THREE.BoxGeometry(2.0, 0.03, 0.5), carbon, 0, 0.2, 2.45);
+  add(new RoundedBoxGeometry(0.34, 0.1, 0.36, 2, 0.03), carbon, 0, 1.22, -0.55);
+  for (const s of [-1, 1]) { add(new RoundedBoxGeometry(0.5, 0.05, 0.05, 2, 0.02), MAT.headLight(), s * 0.66, 0.5, 2.45, 0, s * -0.4, 0); add(new RoundedBoxGeometry(0.7, 0.05, 0.05, 2, 0.02), MAT.redLight(), s * 0.42, 0.74, -2.66); add(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 8), MAT.chrome(), s * 0.22, 0.44, -2.62, Math.PI / 2, 0, 0); }
+  const d = decal(livery, 0.5); d.position.set(0, 0.79, 1.6); d.rotation.x = -Math.PI / 2 + 0.08; g.add(d);
+  g.userData.eye = new THREE.Vector3(-0.35, 0.93, 0.05);
+  g.userData.kind = 'gt';
+  return g;
+}
+
+function buildLMH(livery) {
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshPhysicalMaterial({ map: f1BodyLivery(livery, 'body'), metalness: 0.35, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.08 });
+  const podMat = new THREE.MeshPhysicalMaterial({ map: f1BodyLivery(livery, 'pod'), metalness: 0.35, roughness: 0.38, clearcoat: 1, clearcoatRoughness: 0.08 });
+  const add = (geo, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = true; g.add(m); return m; };
+  const body = new THREE.Mesh(loft([
+    { z: 2.7, wb: 0.34, wt: 0.24, h: 0.14, y: 0.3, n: 3 },
+    { z: 2.0, wb: 0.9, wt: 0.7, h: 0.34, y: 0.4, n: 3.5 },
+    { z: 1.2, wb: 1.5, wt: 1.2, h: 0.5, y: 0.46, n: 4 },
+    { z: 0.2, wb: 1.7, wt: 1.4, h: 0.58, y: 0.5, n: 4.5 },
+    { z: -0.8, wb: 1.7, wt: 1.4, h: 0.58, y: 0.5, n: 4.5 },
+    { z: -1.8, wb: 1.6, wt: 1.2, h: 0.5, y: 0.48, n: 4 },
+    { z: -2.6, wb: 1.3, wt: 0.9, h: 0.3, y: 0.46, n: 3.5 },
+  ], 36), bodyMat); body.castShadow = true; g.add(body);
+  for (const s of [-1, 1]) for (const [z0, z1, z2, z3] of [[2.45, 2.0, 1.2, 0.6], [-0.5, -1.0, -1.8, -2.5]]) {
+    const pod = new THREE.Mesh(loft([
+      { z: z0, x: s * 0.74, w: 0.5, h: 0.3, y: 0.3, n: 3 },
+      { z: z1, x: s * 0.78, w: 0.76, h: 0.66, y: 0.42, n: 3.5 },
+      { z: z2, x: s * 0.78, w: 0.8, h: 0.68, y: 0.44, n: 3.5 },
+      { z: z3, x: s * 0.74, w: 0.66, h: 0.5, y: 0.4, n: 3 },
+    ], 28), podMat); pod.castShadow = true; g.add(pod);
+  }
+  const cabin = new THREE.Mesh(loft([
+    { z: 0.95, wb: 1.05, wt: 0.85, h: 0.05, y: 0.76, n: 3 },
+    { z: 0.35, wb: 1.1, wt: 0.8, h: 0.44, y: 0.96, n: 3.5 },
+    { z: -0.4, wb: 1.06, wt: 0.7, h: 0.48, y: 1.0, n: 3.5 },
+    { z: -1.2, wb: 0.7, wt: 0.3, h: 0.3, y: 0.9, n: 3 },
+    { z: -2.0, wb: 0.26, wt: 0.1, h: 0.1, y: 0.8, n: 3 },
+  ], 32), new THREE.MeshPhysicalMaterial({ map: cabinTex(livery), metalness: 0.3, roughness: 0.25, clearcoat: 0.8 }));
+  cabin.castShadow = true; cabin.userData.hideInCockpit = true; g.add(cabin);
+  const { carbon, accent } = commonRacerBits(g, livery, add, { wheelX: 0.78, wheelZf: 1.55, wheelZr: -1.5, wheelR: 0.35, wheelW: 0.34, mirrorY: 0.9, mirrorZ: 0.7, decalY: 0.62, decalX: 1.19 });
+  add(new THREE.BoxGeometry(0.03, 0.34, 1.3), paint(livery.base), 0, 1.06, -1.45);                        // fin
+  add(wingGeo(0.36, 0.03, 0.05, 1.9), accent, 0, 1.1, -2.4, -0.2);
+  for (const s of [-1, 1]) { add(new THREE.BoxGeometry(0.02, 0.5, 0.55), carbon, s * 0.96, 0.92, -2.4); add(new THREE.BoxGeometry(0.03, 0.42, 0.3), carbon, s * 0.35, 0.86, -2.2, 0.5); }
+  add(new THREE.BoxGeometry(2.0, 0.03, 0.5), carbon, 0, 0.16, 2.5);
+  add(new THREE.BoxGeometry(1.7, 0.22, 0.6), carbon, 0, 0.26, -2.55, -0.4);
+  for (const s of [-1, 1]) { add(new RoundedBoxGeometry(0.16, 0.14, 0.06, 2, 0.03), MAT.headLight(), s * 0.78, 0.5, 2.44); add(new RoundedBoxGeometry(0.3, 0.06, 0.05, 2, 0.02), MAT.redLight(), s * 0.78, 0.6, -2.72); }
+  const d = decal(livery, 0.5); d.position.set(0, 0.795, 1.2); d.rotation.x = -Math.PI / 2 + 0.06; g.add(d);
+  g.userData.eye = new THREE.Vector3(0, 0.97, 0.1);
+  g.userData.kind = 'gt';
+  return g;
+}
+
 export const CarFactory = {
   gtTemplate: null, _ready: null,
   preload() {
@@ -1150,16 +1309,25 @@ export const CarFactory = {
     return this._ready;
   },
 
+  /** carId: 'f1' | 'gt' (458 model) | 'gt3' | 'hyper' | 'lmh' */
   build(modeId, livery, opts = {}) {
     let g;
     if (modeId === 'f1') g = buildF1(livery, opts.compound);
+    else if (modeId === 'gt3') g = buildGT3(livery);
+    else if (modeId === 'hyper') g = buildHyper(livery);
+    else if (modeId === 'lmh') g = buildLMH(livery);
     else if (this.gtTemplate) g = this._cloneGT(livery);
     else g = buildGTProcedural(livery);
     // blob shadow helper for cheap grounding on low quality
     const blob = new THREE.Mesh(new THREE.CircleGeometry(modeId === 'f1' ? 1.9 : 1.6, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
     blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.scale.set(1, 1.35, 1); g.add(blob);
     g.userData.modeId = modeId;
-    return g;
+    // body-tilt pivot at roughly chassis height so dive / squat / banking rotate about the car, not the ground
+    const outer = new THREE.Group();
+    const tilt = new THREE.Group(); tilt.position.y = 0.42; outer.add(tilt);
+    g.position.y -= 0.42; tilt.add(g);
+    outer.userData = { ...g.userData, tilt, inner: g };
+    return outer;
   },
 
   _cloneGT(livery) {
@@ -1277,7 +1445,7 @@ export function buildCockpit(carGroup, renderer) {
   }
 
   cp.userData = { ...cp.userData, eye, wheel: cp.userData.externalWheel || wheel, wheelPivot, display: { canvas: dc, ctx: dx, tex: dtex }, mirror: { rt, cam: mirrorCam }, kind };
-  carGroup.add(cp);
+  (carGroup.userData.inner || carGroup).add(cp);   // ride on the tilting body, not the ground anchor
   carGroup.userData.cockpit = cp;
   return cp;
 }

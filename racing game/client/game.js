@@ -58,11 +58,47 @@ const CARS = {
     idleRPM: 1100, redline: 7600, peakRPM: 5600, maxTorque: 680,
     tyre: TYRE.gt, topHint: 80,
   },
+  gt3: {
+    label: 'GT3', mass: 1240, frontBias: 0.46, cgH: 0.40,
+    a: 1.40, b: 1.42, inertia: 2000, rWheel: 0.35,
+    maxSteer: 0.40, brakeForce: 24000, rollDrag: 12, dragCoef: 0.95,
+    aeroDown: 2.3, aeroDrag: 0.18, driveEff: 0.91,
+    gears: [3.40, 2.30, 1.72, 1.36, 1.12, 0.95], final: 3.6,
+    idleRPM: 1400, redline: 8600, peakRPM: 6400, maxTorque: 700,
+    tyre: { peakSlip: 0.15, muPeak: 1.42, falloff: 0.32, muMin: 0.92 }, topHint: 82,
+  },
+  hyper: {
+    label: 'Hypercar', mass: 1650, frontBias: 0.44, cgH: 0.38,
+    a: 1.50, b: 1.50, inertia: 2600, rWheel: 0.35,
+    maxSteer: 0.38, brakeForce: 30000, rollDrag: 12, dragCoef: 0.88,
+    aeroDown: 2.7, aeroDrag: 0.16, driveEff: 0.92,
+    gears: [3.10, 2.20, 1.68, 1.32, 1.08, 0.92, 0.80, 0.70], final: 3.5,
+    idleRPM: 1600, redline: 11000, peakRPM: 8200, maxTorque: 1100,
+    tyre: { peakSlip: 0.15, muPeak: 1.36, falloff: 0.30, muMin: 0.9 }, topHint: 95,
+  },
+  lmh: {
+    label: 'Le Mans Prototype', mass: 1030, frontBias: 0.45, cgH: 0.33,
+    a: 1.55, b: 1.55, inertia: 1700, rWheel: 0.35,
+    maxSteer: 0.36, brakeForce: 27000, rollDrag: 10, dragCoef: 0.72,
+    aeroDown: 4.0, aeroDrag: 0.22, driveEff: 0.93,
+    gears: [3.20, 2.30, 1.78, 1.45, 1.22, 1.05, 0.92], final: 3.4,
+    idleRPM: 2000, redline: 9200, peakRPM: 7000, maxTorque: 760,
+    tyre: { peakSlip: 0.14, muPeak: 1.52, falloff: 0.4, muMin: 0.92 }, topHint: 92,
+  },
+};
+
+// what the menus call each car
+const CAR_INFO = {
+  f1: { label: 'Formula car', blurb: 'Open-wheel single seater. Massive downforce, DRS, tyre wear.' },
+  gt: { label: 'GT — 458 Spider', blurb: 'Road-going supercar. Forgiving, mechanical grip.' },
+  gt3: { label: 'GT3 racer', blurb: 'Wide-body race car with a big wing and splitter.' },
+  hyper: { label: 'Hypercar (AMG One style)', blurb: '1000+ hp, very fast in a straight line, heavy.' },
+  lmh: { label: 'Le Mans prototype', blurb: 'Enclosed-wheel endurance racer. Light, huge downforce.' },
 };
 
 const MODES = {
-  f1: { id: 'f1', car: 'f1', label: 'Formula', tyreWear: 1.0, fuel: 0.55, drs: true },
-  gt: { id: 'gt', car: 'gt', label: 'GT', tyreWear: 0.45, fuel: 0.30, drs: false },
+  f1: { id: 'f1', car: 'f1', cars: ['f1'], label: 'Formula', tyreWear: 1.0, fuel: 0.55, drs: true },
+  gt: { id: 'gt', car: 'gt', cars: ['gt', 'gt3', 'hyper', 'lmh'], label: 'GT / Sports', tyreWear: 0.45, fuel: 0.30, drs: false },
 };
 
 const DIFF = {
@@ -124,7 +160,7 @@ const TRACK_DEFS = {
       [0, 0, 16, 0, 0], [0, 120, 16, 0, 0], [10, 200, 15, 0.05, 0], [45, 250, 14, 0.10, 1],
       [110, 262, 14, 0.10, 1], [175, 245, 14, 0.06, 0.5], [205, 190, 15, 0, 0], [205, 60, 16, 0, 0],
       [198, -10, 15, 0.04, 0], [165, -60, 14, 0.10, 1], [100, -74, 14, 0.10, 1], [38, -58, 14, 0.06, 0.5],
-      [6, -8, 15, 0, 0],
+      [6, -44, 15, 0.02, 0],
     ],
     runoff: 9, sectors: [0.34, 0.68],
     drs: [], gravel: [],
@@ -134,27 +170,27 @@ const TRACK_DEFS = {
     name: 'Autodromo Nazionale (inspired)', country: 'Italy', tint: 0x1b5e20,
     pts: [
       [0, 0, 15, 0, 0],            // start/finish straight
-      [0, 240, 15, 0, 0],
-      [4, 300, 11, 0, 0.5],        // Rettifilo chicane
-      [16, 316, 10, 0, 0.5],
-      [8, 340, 11, 0, 0.5],
+      [0, 230, 15, 0, 0],
+      [0, 284, 12, 0, 0.5],        // Rettifilo chicane
+      [18, 314, 11, 0, 0.5],
+      [8, 350, 12, 0, 0.5],
       [10, 430, 14, 0, 0],         // Curva Grande
       [42, 500, 13, 0.06, 0],
       [95, 512, 13, 0.05, 0],
       [150, 470, 13, 0, 0],
-      [168, 405, 11, 0, 0],        // della Roggia chicane
-      [156, 386, 10, 0, 0],
-      [176, 360, 12, 0, 0],
+      [174, 414, 12, 0, 0],        // della Roggia chicane
+      [154, 384, 11, 0, 0],
+      [176, 350, 12, 0, 0],
       [214, 300, 13, 0.05, 0],     // Lesmo 1
       [246, 250, 12, 0.08, 1],
       [250, 205, 12, 0.06, 1],     // Lesmo 2
       [226, 150, 13, 0, 0.5],
-      [176, 60, 14, 0, 0],         // back straight under bridge
+      [176, 60, 14, 0, 0],         // back straight under the bridge
       [150, -40, 13, 0, 0],
-      [150, -120, 12, 0, 0],       // Ascari chicane
-      [128, -140, 11, 0, 0],
-      [150, -176, 11, 0, 0],
-      [150, -300, 15, 0, 0],       // long straight to Parabolica
+      [154, -110, 12, 0, 0],       // Ascari chicane
+      [128, -142, 11, 0, 0],
+      [150, -186, 12, 0, 0],
+      [150, -300, 15, 0, 0],       // long run to Parabolica
       [140, -372, 13, 0.05, 0],
       [104, -410, 13, 0.12, 1],    // Parabolica
       [46, -404, 14, 0.10, 0.5],
@@ -168,115 +204,102 @@ const TRACK_DEFS = {
   spa: {
     name: 'Ardennes Forest (inspired)', country: 'Belgium', tint: 0x1b4332,
     pts: [
-      [0, 0, 14, 0, 6],           // start straight (downhill)
-      [0, 70, 13, 0, 2],
-      [-6, 96, 12, 0.06, 0],      // La Source hairpin
-      [-30, 92, 11, 0.10, 0],
-      [-34, 60, 12, 0.04, -2],
-      [-18, 8, 13, 0, -6],        // down to Eau Rouge
-      [-6, -30, 12, -0.05, -10],  // Eau Rouge compression
-      [10, -66, 12, 0.05, -4],    // Raidillon
-      [26, -110, 12, 0.02, 6],    // uphill
-      [40, -220, 14, 0, 16],      // Kemmel straight (long climb)
-      [58, -300, 13, 0.04, 20],
-      [96, -338, 12, 0.08, 20],   // Les Combes
-      [128, -322, 11, 0.06, 19],
-      [140, -284, 12, 0.05, 18],  // Malmedy
-      [128, -232, 12, 0, 14],
-      [150, -170, 13, 0.10, 8],   // Rivage / Bruxelles
-      [188, -150, 12, 0.08, 4],
-      [196, -96, 13, 0, -2],
-      [172, -20, 13, 0.10, -6],   // Pouhon (fast left, downhill)
-      [150, 40, 13, 0.12, -8],
-      [156, 96, 12, 0.04, -6],
-      [188, 150, 12, 0.06, -2],   // Campus / Stavelot
-      [214, 210, 13, 0.08, 2],
-      [206, 290, 14, 0.03, 6],    // long run to Blanchimont
-      [170, 360, 13, 0.06, 8],
-      [110, 388, 13, 0.05, 8],    // Blanchimont
-      [50, 372, 12, 0, 8],
-      [18, 330, 11, 0, 8],        // Bus Stop chicane
-      [30, 306, 10, 0, 8],
-      [10, 280, 11, 0, 8],
-      [6, 180, 14, 0, 8],
-      [4, 80, 14, 0, 7],
+      [0, 0, 14, 0, 3],            // start/finish on the pit straight, heading down to Eau Rouge
+      [-2, -42, 13, 0, -3],
+      [-6, -78, 12, -0.04, -9],    // Eau Rouge (left kink, compression)
+      [8, -108, 12, 0.06, -5],     // Raidillon (right, climbing)
+      [24, -165, 13, 0.02, 5],
+      [40, -255, 14, 0, 14],       // Kemmel straight (uphill)
+      [58, -322, 13, 0.03, 20],
+      [96, -356, 12, 0.08, 21],    // Les Combes (right)
+      [134, -342, 11, -0.06, 20],  // (left)
+      [152, -302, 12, 0.05, 18],   // Malmedy
+      [148, -250, 12, 0, 14],
+      [176, -200, 13, 0.10, 8],    // Rivage (right, downhill)
+      [214, -178, 12, 0.06, 4],
+      [228, -128, 13, 0.02, 0],
+      [214, -80, 13, -0.10, -5],   // Pouhon (fast left, heading back north)
+      [224, -20, 13, 0.06, -6],    // Campus
+      [212, 26, 12, 0.08, -4],     // Stavelot (right)
+      [176, 40, 13, -0.10, -2],    // Blanchimont (fast left)
+      [130, 34, 13, -0.03, 0],
+      [104, 10, 11, 0, 1],         // Bus Stop
+      [84, 44, 11, 0, 1],
+      [78, 90, 12, 0, 2],          // finishing straight, heading north to La Source
+      [72, 118, 12, 0.06, 4],
+      [50, 140, 11, 0.10, 4],      // La Source hairpin (right)
+      [22, 132, 11, 0.10, 4],
+      [6, 108, 12, 0.06, 4],
+      [2, 60, 14, 0, 3.5],
     ],
-    runoff: 12, sectors: [0.30, 0.66],
-    drs: [[0.10, 0.24]], gravel: [[0.55, 0.60]],
+    runoff: 12, sectors: [0.30, 0.64],
+    drs: [[0.12, 0.14], [0.55, 0.08]], gravel: [[0.26, 0.04], [0.47, 0.04]],
   },
 
   silverstone: {
     name: 'Northants GP (inspired)', country: 'United Kingdom', tint: 0x2d6a4f,
     pts: [
-      [0, 0, 15, 0, 0],
-      [0, 130, 14, 0, 0],
-      [22, 178, 12, 0.08, 0],     // Abbey
-      [30, 214, 12, 0.06, 0],
-      [10, 250, 13, 0, 0],        // Farm curve
-      [-40, 262, 13, 0.05, 0],
-      [-92, 238, 12, 0.06, 0],    // Village
-      [-104, 196, 12, 0.04, 0],   // The Loop
-      [-84, 150, 13, 0, 0],       // Aintree
-      [-30, 96, 14, 0, 0],        // Wellington straight
-      [24, 24, 14, 0, 0],
-      [40, -30, 12, 0.05, 0],     // Brooklands
-      [24, -70, 12, 0.06, 0],     // Luffield
-      [-14, -74, 12, 0.06, 0],
-      [-30, -40, 13, 0, 0],       // Woodcote
-      [-24, 20, 13, 0, 0],
-      [-6, 60, 14, 0, 0],
-      // Maggotts / Becketts / Chapel esses
-      [30, 120, 13, 0.03, 0], [70, 150, 12, -0.03, 0], [96, 128, 12, 0.05, 0],
-      [104, 92, 12, -0.05, 0], [86, 58, 12, 0.05, 0], [96, 18, 12, 0, 0],
-      [140, -30, 14, 0, 0],       // Hangar straight
-      [176, -110, 13, 0, 0],
-      [182, -170, 12, 0.10, 0],   // Stowe
-      [156, -214, 12, 0.06, 0],
-      [104, -220, 13, 0, 0],      // Vale
-      [58, -190, 12, 0.08, 0],    // Club
-      [40, -140, 12, 0.06, 0],
-      [24, -70, 13, 0, 0],
-      [8, 10, 14, 0, 0],
+      [0, 0, 15, 0, 0],            // start straight heading north
+      [0, 120, 14, 0, 0],
+      [26, 174, 13, 0.05, 0],      // Abbey (fast right)
+      [80, 206, 13, 0.02, 0],
+      [130, 232, 12, -0.04, 0],    // Maggotts (left)
+      [172, 216, 12, 0.05, 0],     // Becketts (right)
+      [208, 236, 12, -0.04, 0],    // Chapel (left)
+      [250, 250, 12, 0.03, 0],
+      [292, 236, 12, 0.08, 0],     // Village (right)
+      [302, 196, 12, 0.03, 0],
+      [296, 120, 13, 0, 0],        // Wellington straight heading south
+      [292, 30, 13, 0, 0],
+      [300, -40, 12, -0.04, 0],    // Brooklands (left kink)
+      [286, -110, 12, 0.08, 0],    // Luffield (long right)
+      [244, -150, 12, 0.06, 0],
+      [180, -160, 13, 0.02, 0],    // Hangar straight heading west
+      [80, -172, 14, 0, 0],
+      [-10, -180, 13, 0.02, 0],
+      [-58, -160, 12, 0.08, 0],    // Stowe (right)
+      [-68, -112, 12, 0.03, 0],
+      [-52, -70, 12, -0.04, 0],    // Vale (left kink)
+      [-28, -44, 13, 0.05, 0],     // Club (right)
     ],
     runoff: 11, sectors: [0.33, 0.66],
-    drs: [[0.72, 0.86]], gravel: [[0.40, 0.44]],
+    drs: [[0.42, 0.10], [0.62, 0.12]], gravel: [[0.30, 0.04], [0.56, 0.04]],
   },
 
   nurburgring: {
     name: 'Eifel GP (inspired)', country: 'Germany', tint: 0x14532d,
     pts: [
-      [0, 0, 15, 0, 0],
-      [0, 150, 14, 0, 0],
-      [10, 196, 11, 0.10, 0],     // Turn 1 (Yokohama-S / RTL)
-      [-4, 220, 11, 0.08, 0],
-      [-40, 210, 12, 0.05, 0],
-      [-70, 168, 12, 0.06, 0],    // Mercedes Arena esses
-      [-56, 132, 11, -0.05, 0],
-      [-78, 96, 11, 0.06, 0],
-      [-64, 58, 11, -0.04, 0],
-      [-92, 24, 12, 0.06, 0],     // Ford Kurve
-      [-92, -30, 13, 0, 0],
-      [-60, -70, 13, 0, 0],       // Dunlop-Kehre
-      [-6, -78, 13, 0.05, 0],
-      [46, -54, 13, 0, 0],        // Schumacher-S
-      [70, -8, 12, 0.05, 0],
-      [54, 34, 12, -0.05, 0],
-      [82, 70, 12, 0.05, 0],
-      [130, 74, 13, 0, 0],        // NGK chicane run
-      [176, 44, 12, 0.06, 0],     // Bit-Kurve
-      [188, -4, 12, 0.04, 0],
-      [166, -56, 13, 0.05, 0],    // Veedol chicane
-      [150, -78, 11, 0, 0],
-      [172, -104, 11, 0, 0],
-      [176, -150, 13, 0.08, 0],   // Coca-Cola Kurve
-      [150, -196, 13, 0.10, 0],
-      [96, -206, 14, 0.04, 0],    // stadium / Mercedes tribune
-      [40, -180, 13, 0.06, 0],
-      [10, -120, 14, 0, 0],
-      [2, -40, 15, 0, 0],
+      [0, 0, 15, 0, 0],            // start straight heading north
+      [0, 120, 14, 0, 0],
+      [16, 168, 11, 0.10, 0],      // Turn 1 (tight right)
+      [52, 190, 12, 0.06, 0],
+      [104, 196, 12, 0, 0],
+      [150, 216, 11, -0.06, 0],    // Mercedes Arena (left)
+      [168, 256, 11, -0.06, 0],
+      [204, 262, 11, 0.08, 0],     // (right)
+      [228, 232, 11, 0.06, 0],
+      [226, 190, 12, 0, 0],        // heading south
+      [248, 150, 12, -0.06, 0],    // Ford-Kurve (left)
+      [288, 138, 12, 0.08, 0],     // Dunlop hairpin (right)
+      [312, 100, 12, 0.10, 0],
+      [292, 62, 12, 0.08, 0],
+      [250, 56, 12, 0.05, 0],
+      [212, 30, 12, -0.06, 0],     // Schumacher-S (left)
+      [222, -14, 12, 0.06, 0],     // (right)
+      [262, -46, 12, 0.05, 0],     // Bit-Kurve
+      [284, -96, 13, 0.06, 0],     // heading south
+      [272, -150, 12, 0.08, 0],    // Veedol chicane
+      [286, -178, 11, 0, 0],
+      [266, -206, 11, 0, 0],
+      [240, -230, 12, 0.10, 0],    // Coca-Cola hairpin (right)
+      [192, -238, 13, 0.06, 0],
+      [120, -228, 14, 0, 0],       // stadium straight heading west
+      [50, -200, 13, 0.06, 0],     // (right)
+      [12, -150, 13, 0.06, 0],
+      [2, -80, 14, 0, 0],          // heading north to the line
     ],
     runoff: 11, sectors: [0.34, 0.67],
-    drs: [[0.90, 0.12]], gravel: [[0.62, 0.66]],
+    drs: [[0.0, 0.08], [0.70, 0.10]], gravel: [[0.10, 0.03], [0.40, 0.04]],
   },
 };
 
@@ -429,7 +452,8 @@ class Track {
     return {
       i: best, s: sm.s, lateral, width: sm.width, curv: sm.curv, tgt: sm.tgt,
       y: sm.y + Math.abs(lateral) * Math.sin(sm.bank) * (lateral > 0 ? -Math.sign(sm.bank) : Math.sign(sm.bank)) * 0,
-      groundY: sm.y, leftX: sm.left.x, leftZ: sm.left.z, tanYaw: Math.atan2(sm.tan.x, sm.tan.z),
+      groundY: sm.y + Math.sin(sm.bank) * clamp(lateral, -sm.width * 0.5, sm.width * 0.5),
+      leftX: sm.left.x, leftZ: sm.left.z, tanYaw: Math.atan2(sm.tan.x, sm.tan.z),
       bank: sm.bank,
     };
   }
@@ -513,7 +537,7 @@ class Vehicle {
     this.gear = 0; this.rpm = cfg.idleRPM;
     this._ax = 0; this._shiftT = 0;
     this.input = { throttle: 0, brake: 0, steer: 0, handbrake: false };
-    this.steerActual = 0;
+    this.steerActual = 0; this.thrActual = 0; this.brkActual = 0; this.reversing = false;
     this.pitch = 0; this.roll = 0;
     this.slip = 0; this.wheelSpin = 0; this.lastImpact = 0;
     this.tyre = 1; this.fuel = 1; this.tyreWearRate = 0.00002; this.fuelRate = 0.00003; // ~10-25 min stints
@@ -548,6 +572,18 @@ class Vehicle {
     const winding = Math.abs(inp.steer) > Math.abs(this.steerActual) && (this.steerActual === 0 || Math.sign(inp.steer) === Math.sign(this.steerActual));
     const rate = (winding ? 2.6 : 7.0) * dt;
     this.steerActual += clamp(inp.steer - this.steerActual, -rate, rate);
+
+    // progressive pedals for the keyboard player: a tap is a dab of brake / throttle, holding builds
+    // to full over ~0.6 s (brake) / ~0.3 s (throttle). AI inputs are already continuous.
+    let thr, brk;
+    if (this.isPlayer) {
+      thr = this.thrActual = clamp(this.thrActual + clamp(inp.throttle - this.thrActual, -9 * dt, 3.2 * dt), 0, 1);
+      brk = this.brkActual = clamp(this.brkActual + clamp(inp.brake - this.brkActual, -9 * dt, 1.7 * dt), 0, 1);
+      // reverse: holding the brake at a standstill backs the car up; the throttle then brakes you to a stop
+      if (!this.reversing && brk > 0.05 && thr < 0.05 && this.vx < 0.5 && this.vx > -0.5) this.reversing = true;
+      if (this.reversing && ((thr > 0.05 && Math.abs(this.vx) < 0.3) || this.vx > 1.5)) this.reversing = false;
+    } else { thr = inp.throttle; brk = inp.brake; this.reversing = false; }
+    const drivePedal = this.reversing ? brk : thr;
     const g = track.sample(this.pos.x, this.pos.z, this._hint);
     this._hint = g.i;
     const surf = track.surfaceAt(g);
@@ -593,11 +629,12 @@ class Vehicle {
       else if (this.rpm < c.redline * 0.44 && this.gear > 0) { this.gear--; this._shiftT = 0.18; }
     }
     const torque = torqueCurve(this.rpm, c) * (this.fuel > 0 ? 1 : 0);
-    let driveForce = inp.throttle * torque * c.gears[this.gear] * c.final * c.driveEff / c.rWheel;
-    if (speed < 3 && inp.throttle > 0.05) driveForce += 1500 * inp.throttle * (1 - speed / 3); // launch/creep
+    let driveForce = (this.reversing ? -brk * 0.45 : thr) * torque * c.gears[this.gear] * c.final * c.driveEff / c.rWheel;
+    if (speed < 3 && drivePedal > 0.05) driveForce += (this.reversing ? -900 : 1500) * drivePedal * (1 - speed / 3); // launch/creep
+    if (this.reversing && this.vx < -7) driveForce = Math.max(driveForce, 0);                              // reverse tops out ~25 km/h
     if (this._shiftT > 0.12) driveForce *= 0.25;                                  // shift cut
 
-    let brakeF = inp.brake * c.brakeForce;
+    let brakeF = (this.reversing ? thr : brk) * c.brakeForce;
     if (inp.handbrake) { FyR *= 0.35; brakeF += c.brakeForce * 0.45; }
 
     // longitudinal traction limit at the driven (rear) axle — excess spins the tyres
@@ -605,7 +642,7 @@ class Vehicle {
     // traction control (always on for keyboard play): keep enough of the friction circle for cornering
     const tractionCap = rearGrip * (this.assist ? 0.70 : 0.92);
     this.wheelSlip = 0;
-    if (driveForce > tractionCap) { this.wheelSlip = clamp((driveForce - tractionCap) / (tractionCap + 1), 0, 2); driveForce = tractionCap * (1 + Math.min(this.wheelSlip, 1) * 0.05); }
+    if (Math.abs(driveForce) > tractionCap) { this.wheelSlip = clamp((Math.abs(driveForce) - tractionCap) / (tractionCap + 1), 0, 2); driveForce = Math.sign(driveForce) * tractionCap * (1 + Math.min(this.wheelSlip, 1) * 0.05); }
     // stability control: back off the power when the rear starts to step out
     if (this.assist && Math.abs(saR) > c.tyre.peakSlip * 1.15) driveForce *= clamp(1 - (Math.abs(saR) / c.tyre.peakSlip - 1.15) * 1.6, 0.25, 1);
 
@@ -614,7 +651,7 @@ class Vehicle {
     // off-track surfaces really slow you down (grass ~2.5 m/s², gravel ~6 m/s²)
     const surfDecel = surf.drag * 0.8 * c.mass * Math.sign(this.vx) * smoothstep(0.5, 4, speed);
     let Fx = driveForce - Math.sign(this.vx) * brakeF - drag - roll - surfDecel;
-    if (Math.abs(this.vx) < 0.4 && inp.throttle < 0.05) Fx = -this.vx * c.mass / dt * 0.6; // hold still
+    if (Math.abs(this.vx) < 0.4 && drivePedal < 0.05) Fx = -this.vx * c.mass / dt * 0.6; // hold still
 
     // friction circle — rear
     const usedR = Math.abs(driveForce - Math.sign(this.vx) * brakeF * 0.55);
@@ -675,20 +712,29 @@ class Vehicle {
       this.vy = wv2.x * Math.cos(this.yaw) - wv2.z * Math.sin(this.yaw);
     }
 
-    // ground height follow
-    const gY = track.sample(this.pos.x, this.pos.z, this._hint).groundY;
-    this.pos.y = lerp(this.pos.y, gY, clamp(dt * 8, 0, 1));
+    // ground height follow: road surface incl. banking, +3 cm of tarmac, kerbs a touch higher
+    const g3 = track.sample(this.pos.x, this.pos.z, this._hint);
+    const gY = g3.groundY + (surf.kind === 'curb' ? 0.06 : surf.kind === 'tarmac' ? 0.03 : 0);
+    this.pos.y = lerp(this.pos.y, gY, clamp(dt * 45, 0, 1));
 
-    // visual body attitude
-    this.pitch = lerp(this.pitch, clamp(-this._ax * 0.012, -0.09, 0.09), clamp(dt * 6, 0, 1));
-    this.roll = lerp(this.roll, clamp(this.yawRate * this.vx * 0.004, -0.12, 0.12), clamp(dt * 6, 0, 1));
+    // road gradient & banking under the car -> the body follows the road (no more nose in the hill)
+    const N = track.N, sA = track.samples[(g3.i - 2 + N) % N], sB = track.samples[(g3.i + 2) % N];
+    const grade = (sB.y - sA.y) / Math.max(1, sA.pos.distanceTo(sB.pos));
+    const dYaw = this.yaw - g3.tanYaw;
+    const onRoad = 1 - smoothstep(g3.width * 0.5 + 1.6, g3.width * 0.5 + 6, Math.abs(g3.lateral));
+    this.slopePitch = lerp(this.slopePitch || 0, -Math.atan(grade) * Math.cos(dYaw) - g3.bank * Math.sin(dYaw) * onRoad, clamp(dt * 8, 0, 1));
+    this.bankRoll = lerp(this.bankRoll || 0, -g3.bank * Math.cos(dYaw) * onRoad, clamp(dt * 8, 0, 1));
+
+    // dynamic attitude: gentle dive / squat / lean (rotates about the chassis pivot, see CarFactory)
+    this.pitch = lerp(this.pitch, clamp(-this._ax * 0.0035, -0.03, 0.03), clamp(dt * 6, 0, 1));
+    this.roll = lerp(this.roll, clamp(this.yawRate * this.vx * 0.0025, -0.06, 0.06), clamp(dt * 6, 0, 1));
     this._ax = ax;
     this.wheelSpin = (this.wheelSlip || 0) + this.slip * 0.5;
 
     // wear / fuel
     const wear = (this.slip * 0.5 + 0.4) * this.tyreWearRate * env.wearScale * dt * 60;
     this.tyre = clamp(this.tyre - wear, 0.2, 1);
-    this.fuel = clamp(this.fuel - inp.throttle * this.fuelRate * env.fuelScale * dt * 60, 0, 1);
+    this.fuel = clamp(this.fuel - drivePedal * this.fuelRate * env.fuelScale * dt * 60, 0, 1);
 
     // off-track / stopped bookkeeping
     if (surf.kind === 'grass' || surf.kind === 'gravel') this.offTrack += dt; else this.offTrack = Math.max(0, this.offTrack - dt * 2);
@@ -875,7 +921,7 @@ class CameraRig {
 
     if (this.mode === 'cockpit') {
       const eyeL = car.mesh?.userData.eye || new THREE.Vector3(0, 1.0, 0.1);
-      const p = eyeL.clone(); if (car.mesh) car.mesh.localToWorld(p); else p.add(car.pos);
+      const p = eyeL.clone(); if (car.mesh) (car.mesh.userData.inner || car.mesh).localToWorld(p); else p.add(car.pos);
       // head motion: engine vibration + speed buzz, g-force lean
       this._t = (this._t || 0) + dt;
       const rpmN = car.cfg ? (car.rpm - car.cfg.idleRPM) / (car.cfg.redline - car.cfg.idleRPM) : 0;
@@ -899,7 +945,7 @@ class CameraRig {
       this.pos.lerp(desired, clamp(dt * 6, 0, 1));
       this.cam.position.copy(this.pos);
       this.cam.lookAt(car.pos.clone().addScaledVector(fwd, 9).addScaledVector(up, 1.1));
-      this.cam.fov = 66 + clamp(speed * 0.16, 0, 14);
+      this.cam.fov = 66;
     } else if (this.mode === 'tv') {
       this.tvHold -= dt;
       let best = this.tvIndex, bd = Infinity;
@@ -1077,7 +1123,7 @@ class HUD {
     const units = st.units === 'mph' ? 2.23694 : 3.6;
     $('hudSpd').textContent = Math.round(p.speed * units);
     $('dash').querySelector('small').textContent = st.units === 'mph' ? ' mph' : ' km/h';
-    $('hudGear').textContent = p.gear === 0 && p.speed < 2 ? 'N' : (p.gear + 1);
+    $('hudGear').textContent = p.reversing ? 'R' : (p.gear === 0 && p.speed < 2 ? 'N' : (p.gear + 1));
     const rpmN = clamp((p.rpm - p.cfg.idleRPM) / (p.cfg.redline - p.cfg.idleRPM), 0, 1);
     $('hudRpm').style.width = (rpmN * 100) + '%';
     $('rpm').classList.toggle('red', rpmN > 0.93);
@@ -1244,7 +1290,9 @@ class Game {
     this.sessionType = sessionType;
     this.settings = { laps: 3, aiCount: 0, aiDifficulty: 'medium', weather: 'dry', mode: 'gt', practice: false, ...settings };
     const modeCfg = MODES[this.settings.mode];
-    const carCfg = CARS[modeCfg.car];
+    const carId = modeCfg.cars.includes(this.settings.car) ? this.settings.car : modeCfg.cars[0];
+    this.settings.car = carId;
+    const carCfg = CARS[carId];
     $('boot').style.display = 'grid'; $('bootMsg').textContent = 'building ' + TRACK_DEFS[this.settings.trackId].name + '…';
     await Promise.race([CarFactory.preload(), new Promise((r) => setTimeout(r, 6000))]);
     await new Promise((r) => setTimeout(r, 30));
@@ -1265,7 +1313,8 @@ class Game {
     this.player.name = Store.profile?.name || 'You';
     this.player.isPlayer = true;
     this.player.livery = Store.livery();
-    this.player.mesh = CarFactory.build(modeCfg.id, this.player.livery, { compound: 'soft' });
+    this.player.carId = carId;
+    this.player.mesh = CarFactory.build(carId, this.player.livery, { compound: 'soft' });
     buildCockpit(this.player.mesh, this.renderer);
     scene.add(this.player.mesh);
     this.cars.push(this.player);
@@ -1274,10 +1323,12 @@ class Game {
     const aiN = isTT ? 0 : (this.settings.aiCount || 0);
     this.ais = [];
     for (let k = 0; k < aiN; k++) {
-      const v = new Vehicle(carCfg, { assist: true });
+      // mixed grid in the sports classes so it looks like a real multi-class field
+      const aiCar = modeCfg.cars.length > 1 ? modeCfg.cars[(k + 1) % modeCfg.cars.length] : carId;
+      const v = new Vehicle(CARS[aiCar], { assist: true }); v.carId = aiCar;
       v.name = AI_NAMES[k % AI_NAMES.length];
       v.livery = { base: AI_COLORS[k % AI_COLORS.length], accent: '#ffffff', pattern: k % 2 ? 'stripe' : 'solid', number: k + 2 };
-      v.mesh = CarFactory.build(modeCfg.id, v.livery, { compound: ['soft', 'medium', 'hard'][k % 3] });
+      v.mesh = CarFactory.build(aiCar, v.livery, { compound: ['soft', 'medium', 'hard'][k % 3] });
       scene.add(v.mesh);
       this.cars.push(v);
       this.ais.push(new AI(v, this.settings.aiDifficulty));
@@ -1294,7 +1345,7 @@ class Game {
       const gf = Store.ghost(this.settings.trackId, this.settings.mode);
       if (gf && gf.length) {
         this.ghostFrames = gf;
-        this.ghost = CarFactory.build(modeCfg.id, { base: '#7dd3fc', accent: '#0ea5e9', pattern: 'solid', number: 0 });
+        this.ghost = CarFactory.build(carId, { base: '#7dd3fc', accent: '#0ea5e9', pattern: 'solid', number: 0 });
         this.ghost.traverse((m) => { if (m.isMesh && m.material) { const mats = Array.isArray(m.material) ? m.material : [m.material]; m.material = mats.map((mm) => { const c = mm.clone(); c.transparent = true; c.opacity = 0.38; c.depthWrite = false; return c; }); if (m.material.length === 1) m.material = m.material[0]; m.castShadow = false; } });
         scene.add(this.ghost);
       }
@@ -1620,7 +1671,9 @@ class Game {
     for (const c of this.cars) {
       if (!c.mesh) continue;
       c.mesh.position.copy(c.pos);
-      c.mesh.rotation.set(c.pitch, c.yaw, c.roll, 'YXZ');
+      c.mesh.rotation.set(0, c.yaw, 0);
+      const tilt = c.mesh.userData.tilt;
+      if (tilt) tilt.rotation.set(c.pitch + (c.slopePitch || 0), 0, c.roll + (c.bankRoll || 0));
       const ws = c.mesh.userData.wheels;
       if (ws) { const sp = c.speed / c.cfg.rWheel * dt; for (let i = 0; i < ws.length; i++) { ws[i].rotation.x += sp; if (i < 2) ws[i].rotation.y = c.steerActual * 0.42; } }
       const flap = c.mesh.userData.drsFlap;
@@ -1643,7 +1696,7 @@ class Game {
           this._dispT = 0;
           const p = this.player;
           drawDisplay(cp, {
-            gear: p.gear === 0 && p.speed < 2 ? 'N' : String(p.gear + 1), speedKmh: Math.round(p.speed * 3.6),
+            gear: p.reversing ? 'R' : (p.gear === 0 && p.speed < 2 ? 'N' : String(p.gear + 1)), speedKmh: Math.round(p.speed * 3.6),
             rpmN: clamp((p.rpm - p.cfg.idleRPM) / (p.cfg.redline - p.cfg.idleRPM), 0, 1), lapMs: fmtTime(this.lapElapsed()),
             delta: this.deltaToBest(), pos: this.playerPos(), lap: Math.min(p.lap + 1, this.settings.laps), laps: this.settings.laps, drs: this.env.drsOpen,
           });
@@ -1651,7 +1704,7 @@ class Game {
         this._mirT = (this._mirT || 0) + 1;
         if (this._mirT % 2 === 0 && Store.settings().qual !== 'low') {
           const m = cp.userData.mirror;
-          const eye = cp.userData.eye.clone(); this.player.mesh.localToWorld(eye);
+          const eye = cp.userData.eye.clone(); (this.player.mesh.userData.inner || this.player.mesh).localToWorld(eye);
           const fwd = new THREE.Vector3(Math.sin(this.player.yaw), 0, Math.cos(this.player.yaw));
           m.cam.position.copy(eye).addScaledVector(fwd, -0.4); m.cam.up.set(0, 1, 0);
           m.cam.lookAt(eye.clone().addScaledVector(fwd, -60).setY(eye.y + 0.4));
@@ -1723,11 +1776,11 @@ class Game {
   _mpSend() {
     const p = this.player;
     const msg = {
-      p: [p.pos.x, p.pos.y, p.pos.z], q: [p.pitch, p.yaw, p.roll],
+      p: [p.pos.x, p.pos.y, p.pos.z], q: [p.pitch + (p.slopePitch || 0), p.yaw, p.roll + (p.bankRoll || 0)],
       v: [p.worldVel().x, 0, p.worldVel().z], rpm: p.rpm, gear: p.gear, steer: p.steerActual,
-      progress: p.raceProgress,
+      progress: p.raceProgress, car: p.carId,
     };
-    if (this.isHost) msg.ai = this.ais.map((a) => ({ id: 'ai' + a.v.livery.number, name: a.v.name, p: [a.v.pos.x, a.v.pos.y, a.v.pos.z], q: [a.v.pitch, a.v.yaw, a.v.roll], livery: a.v.livery }));
+    if (this.isHost) msg.ai = this.ais.map((a) => ({ id: 'ai' + a.v.livery.number, name: a.v.name, p: [a.v.pos.x, a.v.pos.y, a.v.pos.z], q: [a.v.pitch + (a.v.slopePitch || 0), a.v.yaw, a.v.roll + (a.v.bankRoll || 0)], livery: a.v.livery, car: a.v.carId }));
     this.net.emit('car:update', msg);
   }
   _mpInterp(dt) {
@@ -1739,7 +1792,7 @@ class Game {
       seen.add(id);
       let rc = this.remoteCars.get(id);
       if (!rc) {
-        const mesh = CarFactory.build(MODES[this.settings.mode].id, entry.livery || { base: isAi ? '#f59e0b' : '#22d3ee', accent: '#fff', pattern: 'solid', number: 0 });
+        const mesh = CarFactory.build(entry.car || this.settings.car || MODES[this.settings.mode].id, entry.livery || { base: isAi ? '#f59e0b' : '#22d3ee', accent: '#fff', pattern: 'solid', number: 0 });
         this.scene.add(mesh);
         rc = { mesh, pos: new THREE.Vector3(...entry.p), rot: entry.q ? entry.q.slice() : [0, 0, 0], tp: new THREE.Vector3(...entry.p), tr: entry.q ? entry.q.slice() : [0, 0, 0], name: entry.name };
         this.remoteCars.set(id, rc);
@@ -1753,7 +1806,8 @@ class Game {
       rc.pos.lerp(rc.tp, clamp(dt * 10, 0, 1));
       rc.rot[0] = lerp(rc.rot[0], rc.tr[0], .3); rc.rot[1] = lerp(rc.rot[1], rc.tr[1], .3); rc.rot[2] = lerp(rc.rot[2], rc.tr[2], .3);
       rc.mesh.position.copy(rc.pos);
-      rc.mesh.rotation.set(rc.rot[0], rc.rot[1], rc.rot[2], 'YXZ');
+      rc.mesh.rotation.set(0, rc.rot[1], 0);
+      if (rc.mesh.userData.tilt) rc.mesh.userData.tilt.rotation.set(rc.rot[0], 0, rc.rot[2]);
     }
   }
   _endRaceMp(d) {
@@ -1796,7 +1850,9 @@ const UI = {
     // setup screen
     $('btnGo').onclick = () => this.startFromSetup();
     $('selMode').onchange = () => this.syncSetupMode();
-    this.syncSetupMode();
+    $('selCar').onchange = () => { $('setupCarBlurb').textContent = CAR_INFO[$('selCar').value]?.blurb || ''; };
+    $('mpMode').onchange = () => this.syncMpCar();
+    this.syncSetupMode(); this.syncMpCar();
 
     // career
     $('selSeason').onchange = () => this.renderCareer();
@@ -1857,9 +1913,18 @@ const UI = {
     const w = $('wLogin'); if (w) w.onclick = (e) => { e.preventDefault(); this.renderProfile(); this.screen('profile'); };
   },
 
-  syncSetupMode() {
-    // nothing mode-specific to hide right now; hook for future
+  _fillCars(sel, mode, preferred) {
+    const cars = MODES[mode].cars;
+    const cur = sel.value;
+    sel.innerHTML = cars.map((c) => `<option value="${c}">${CAR_INFO[c].label}</option>`).join('');
+    sel.value = cars.includes(cur) ? cur : (cars.includes(preferred) ? preferred : cars[0]);
+    sel.disabled = cars.length === 1;
   },
+  syncSetupMode() {
+    this._fillCars($('selCar'), $('selMode').value, Store.settings().lastCar);
+    $('setupCarBlurb').textContent = CAR_INFO[$('selCar').value]?.blurb || '';
+  },
+  syncMpCar() { this._fillCars($('mpCar'), $('mpMode').value, Store.settings().lastCar); },
   prepSetup(kind) {
     this._setupKind = kind;
     $('setupTitle').textContent = kind === 'tt' ? 'Time Trial' : 'Quick Race';
@@ -1882,13 +1947,15 @@ const UI = {
       aiCount: clamp(+$('selAi').value || 0, 0, 15),
       aiDifficulty: $('selDiff').value,
       practice: $('selPractice').checked,
+      car: $('selCar').value,
     };
-    const st = Store.settings(); st.lastDiff = s.aiDifficulty; Store.saveSettings(st);
+    const st = Store.settings(); st.lastDiff = s.aiDifficulty; st.lastCar = s.car; Store.saveSettings(st);
     GAME.start(kind === 'tt' ? 'tt' : 'quick', s);
   },
 
   /* ----- career ----- */
   renderCareer() {
+    if (!$('selCareerCar').options.length) this._fillCars($('selCareerCar'), 'gt', Store.settings().lastCar);
     const seasonId = $('selSeason').value;
     const season = SEASONS.find((s) => s.id === seasonId);
     const diff = $('selSeasonDiff').value;
@@ -1917,6 +1984,7 @@ const UI = {
     GAME.start('career', {
       trackId: r.trackId, mode: r.mode, laps: r.laps, weather: 'dry',
       aiCount: 9, aiDifficulty: diff, practice: false,
+      car: r.mode === 'f1' ? 'f1' : $('selCareerCar').value,
       _career: { seasonId, roundIndex: prog.round },
     });
   },
@@ -2061,7 +2129,10 @@ const UI = {
       // launch the race locally for everyone in the room
       const room = this._lobbyRoom;
       const mp = { spectator: this._spectator, isHost: room.hostId === net.socket.id, roomCode: room.code };
-      GAME.start('mp', { ...room.settings, _mp: mp });
+      // everyone drives their own pick from the "Your car" dropdown if it fits the room's discipline
+      const mine = $('mpCar').value;
+      const car = MODES[room.settings.mode].cars.includes(mine) ? mine : room.settings.car;
+      GAME.start('mp', { ...room.settings, car, _mp: mp });
     });
     net.on('race:finished', (d) => {});
   },
@@ -2087,7 +2158,7 @@ const UI = {
     const settings = {
       trackId: $('mpTrack').value, mode: $('mpMode').value, weather: $('mpWx').value,
       laps: clamp(+$('mpLaps').value || 3, 1, 30), aiCount: clamp(+$('mpAi').value || 0, 0, 15),
-      aiDifficulty: $('mpDiff').value,
+      aiDifficulty: $('mpDiff').value, car: $('mpCar').value,
     };
     GAME.net.emit('room:create', { name, settings }, (res) => {
       if (res?.ok) { this._spectator = false; this.showLobby(res.room); }
