@@ -276,8 +276,12 @@ export class Terrain {
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity, sumY = 0;
     for (const s of S) { minX = Math.min(minX, s.pos.x); maxX = Math.max(maxX, s.pos.x); minZ = Math.min(minZ, s.pos.z); maxZ = Math.max(maxZ, s.pos.z); sumY += s.y; }
     const meanY = sumY / S.length;
-    const margin = 340;
-    const cell = quality === 'high' ? 6 : quality === 'med' ? 8 : 12;
+    const margin = 300;
+    // Cell size grows with the circuit so the vertex count stays roughly constant —
+    // at a fixed 6-8 m a 4 km track would build a multi-hundred-thousand-vertex heightfield.
+    const spanM = Math.max(maxX - minX, maxZ - minZ) + margin * 2;
+    const base = quality === 'high' ? 6 : quality === 'med' ? 8 : 12;
+    const cell = Math.max(base, spanM / 320);   // ~320 cells across the longest axis
     this.cell = cell; this.x0 = minX - margin; this.z0 = minZ - margin;
     this.nx = Math.ceil((maxX - minX + margin * 2) / cell) + 1;
     this.nz = Math.ceil((maxZ - minZ + margin * 2) / cell) + 1;
@@ -563,10 +567,10 @@ export function buildWorld(track, scene, quality, weather) {
   {
     const tyreGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.6, 10);
     const tyreMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
-    const tyres = new THREE.InstancedMesh(tyreGeo, tyreMat, 3000);
+    const tyres = new THREE.InstancedMesh(tyreGeo, tyreMat, 9000);
     const cols = [new THREE.Color(0x111111), new THREE.Color(0x111111), new THREE.Color(0xd81f2a), new THREE.Color(0xf2f2f2), new THREE.Color(0x1b4fd8)];
     let tk = 0;
-    for (let i = 0; i < N && tk < 2990; i += 1) {
+    for (let i = 0; i < N && tk < 8990; i += 1) {
       const sm = S[i];
       if (Math.abs(sm.curv) < 0.0115) continue;
       const side = sm.curv > 0 ? -1 : 1;
@@ -668,7 +672,11 @@ export function buildWorld(track, scene, quality, weather) {
   /* ---- pit complex along the main straight (left side) ---- */
   {
     const i0 = (N - Math.round(60 / step) + N) % N; // start ~60m before the line
-    const len = 150; const cnt = Math.round(len / step);
+    // The pit complex is built straight, so it must not run past the end of the pit straight —
+    // on a short circuit a fixed 150 m building curves out into the track.
+    let straight = 0;
+    while (straight < 150 && Math.abs(S[(i0 + Math.round(straight / step)) % N].curv) < 0.0045) straight += step;
+    const len = clamp(straight - 10, 45, 150); const cnt = Math.round(len / step);
     const conc = new THREE.MeshStandardMaterial({ map: Tex.concrete(), roughness: 0.9 });
     // pit wall
     const wallGeo = ribbon(track, (sm) => ({ off: sm.width / 2 + 2.2 }), (sm) => ({ off: sm.width / 2 + 2.6 }), { yOff: 0.0 });
@@ -731,7 +739,9 @@ export function buildWorld(track, scene, quality, weather) {
     for (const s of [1, -1]) { const post = new THREE.Mesh(new THREE.BoxGeometry(1.2, 6.5, 1.2), steel); post.position.set(s * span / 2, 3.25, 0); g.add(post); }
     const rail = new THREE.Mesh(new THREE.BoxGeometry(span, 1.2, 0.1), new THREE.MeshStandardMaterial({ map: Tex.ad('ROUND ' + (track.name.split(' ')[0]).toUpperCase(), '#111', '#fff') })); rail.position.set(0, 7.4, -2); g.add(rail);
     const rail2 = rail.clone(); rail2.position.z = 2; rail2.rotation.y = Math.PI; g.add(rail2);
-    g.position.set(sm.pos.x, sm.y, sm.pos.z); g.rotation.y = Math.atan2(sm.tan.x, sm.tan.z) + Math.PI / 2;
+    // rotation.y = track yaw puts local +x across the circuit and local +z along it.
+    // (With +PI/2 the deck ran ALONG the track and both legs stood on the racing line.)
+    g.position.set(sm.pos.x, sm.y, sm.pos.z); g.rotation.y = Math.atan2(sm.tan.x, sm.tan.z);
     scene.add(g);
   }
 
@@ -778,7 +788,8 @@ export function buildWorld(track, scene, quality, weather) {
       g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
       return g;
     })();
-    const treeCount = loQ ? 500 : hiQ ? 5200 : 2600;
+    const lenScale = clamp(track.length / 1400, 1, 3.2);
+    const treeCount = Math.round((loQ ? 500 : hiQ ? 5200 : 2600) * lenScale);
     const kinds = ['round', 'cone'];
     const meshes = kinds.map((k) => new THREE.InstancedMesh(crossGeo, new THREE.MeshStandardMaterial({ map: Tex.leaf(k), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1 }), treeCount));
     const counts = [0, 0];
@@ -804,7 +815,7 @@ export function buildWorld(track, scene, quality, weather) {
     meshes.forEach((m, k) => { m.count = counts[k]; m.castShadow = !loQ; scene.add(m); });
 
     // bushes just behind the fence
-    const bushN = loQ ? 150 : 700;
+    const bushN = Math.round((loQ ? 150 : 700) * lenScale);
     const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), bushN);
     for (let k = 0; k < bushN; k++) {
       const i = Math.floor(rng() * N); const sm = S[i]; const side = rng() < 0.5 ? 1 : -1;

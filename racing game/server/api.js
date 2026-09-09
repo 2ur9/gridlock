@@ -11,12 +11,12 @@ export const router = express.Router();
 // The circuits are modelled at roughly half real-world scale, so these are ~half of
 // real lap records and still deliberately loose — the check only catches the absurd.
 const LAP_FLOOR = {
-  testoval:    { f1: 12_000, gt: 13_000 },
-  monza:       { f1: 34_000, gt: 42_000 },
-  spa:         { f1: 44_000, gt: 55_000 },
-  silverstone: { f1: 38_000, gt: 47_000 },
-  nurburgring: { f1: 38_000, gt: 48_000 },
-  alpenring:   { f1: 36_000, gt: 45_000 },
+  testoval:    { f1:  40_000, gt:  48_000 },
+  monza:       { f1:  85_000, gt: 105_000 },
+  spa:         { f1:  85_000, gt: 105_000 },
+  silverstone: { f1:  70_000, gt:  85_000 },
+  nurburgring: { f1:  85_000, gt: 105_000 },
+  alpenring:   { f1:  50_000, gt:  62_000 },
 };
 const LAP_CEIL = 20 * 60_000; // 20 min — clearly not a real flying lap
 

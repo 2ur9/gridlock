@@ -73,7 +73,7 @@ function standings(room) {
   });
   racers.forEach((p, i) => { p.position = i + 1; });
   return racers.map((p) => ({
-    id: p.id, name: p.name, lap: p.lap, position: p.position,
+    id: p.id, name: p.name, lap: p.lap, position: p.position, trackProgress: p.trackProgress,
     bestLap: p.bestLap, lastLap: p.lastLap, finished: p.finished, penaltyMs: p.penaltyMs,
   }));
 }
@@ -182,9 +182,16 @@ export function attachRooms(io) {
         p.finished = false; p.finishOrder = 0; p.lap = 0;
         p.bestLap = null; p.lastLap = null; p.penaltyMs = 0; p.trackProgress = 0;
       }
+      // Assign each driver a distinct grid slot, otherwise every client places itself on pole
+      // and the whole field starts stacked in the same box.
+      const grid = [...room.players.values()].filter((p) => !p.spectator);
+      grid.forEach((p, i) => { p.gridIndex = i; });
       room.phase = 'countdown';
       room.greenAt = Date.now() + COUNTDOWN_MS;
-      io.to(room.code).emit('race:countdown', { greenAt: room.greenAt, settings: room.settings });
+      io.to(room.code).emit('race:countdown', {
+        greenAt: room.greenAt, settings: room.settings,
+        grid: grid.map((p) => ({ id: p.id, gridIndex: p.gridIndex, name: p.name })),
+      });
       io.to(room.code).emit('room:state', publicRoom(room));
       setTimeout(() => {
         if (room.phase !== 'countdown') return;
@@ -286,6 +293,7 @@ function tick(io, room) {
     clock: room.phase === 'race' ? now - room.greenAt : (room.phase === 'countdown' ? room.greenAt - now : 0),
     cars,
     ai: room.aiCars || [],
+    standings: room.phase === 'race' || room.phase === 'finished' ? standings(room) : null,
   });
 }
 

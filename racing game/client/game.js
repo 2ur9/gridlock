@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import * as THREE from 'three';
-import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=10';
+import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=14';
 
 /* ---------- error surface ---------------------------------------------------- */
 const errBox = document.getElementById('err');
@@ -43,7 +43,7 @@ const CARS = {
   f1: {
     label: 'Formula', mass: 795, frontBias: 0.435, cgH: 0.30,
     a: 1.70, b: 1.70, inertia: 900, rWheel: 0.33,
-    maxSteer: 0.34, brakeForce: 26000, rollDrag: 9, dragCoef: 0.62,
+    maxSteer: 0.34, brakeForce: 26000, brakeBias: 0.6, rollDrag: 9, dragCoef: 0.62,
     aeroDown: 4.9, aeroDrag: 0.30, driveEff: 0.94,
     gears: [3.30, 2.45, 1.95, 1.62, 1.38, 1.20, 1.05, 0.92], final: 3.1,
     idleRPM: 3500, redline: 13200, peakRPM: 10500, maxTorque: 560,
@@ -52,7 +52,7 @@ const CARS = {
   gt: {
     label: 'GT', mass: 1290, frontBias: 0.47, cgH: 0.42,
     a: 1.42, b: 1.44, inertia: 2100, rWheel: 0.345,
-    maxSteer: 0.40, brakeForce: 21000, rollDrag: 13, dragCoef: 1.05,
+    maxSteer: 0.40, brakeForce: 21000, brakeBias: 0.62, rollDrag: 13, dragCoef: 1.05,
     aeroDown: 1.35, aeroDrag: 0.12, driveEff: 0.90,
     gears: [3.55, 2.42, 1.80, 1.42, 1.16, 0.98], final: 3.45,
     idleRPM: 1100, redline: 7600, peakRPM: 5600, maxTorque: 680,
@@ -61,7 +61,7 @@ const CARS = {
   gt3: {
     label: 'GT3', mass: 1240, frontBias: 0.46, cgH: 0.40,
     a: 1.40, b: 1.42, inertia: 2000, rWheel: 0.35,
-    maxSteer: 0.40, brakeForce: 24000, rollDrag: 12, dragCoef: 0.95,
+    maxSteer: 0.40, brakeForce: 24000, brakeBias: 0.62, rollDrag: 12, dragCoef: 0.95,
     aeroDown: 2.3, aeroDrag: 0.18, driveEff: 0.91,
     gears: [3.40, 2.30, 1.72, 1.36, 1.12, 0.95], final: 3.6,
     idleRPM: 1400, redline: 8600, peakRPM: 6400, maxTorque: 700,
@@ -70,7 +70,7 @@ const CARS = {
   hyper: {
     label: 'Hypercar', mass: 1650, frontBias: 0.44, cgH: 0.38,
     a: 1.50, b: 1.50, inertia: 2600, rWheel: 0.35,
-    maxSteer: 0.38, brakeForce: 30000, rollDrag: 12, dragCoef: 0.88,
+    maxSteer: 0.38, brakeForce: 30000, brakeBias: 0.63, rollDrag: 12, dragCoef: 0.88,
     aeroDown: 2.7, aeroDrag: 0.16, driveEff: 0.92,
     gears: [3.10, 2.20, 1.68, 1.32, 1.08, 0.92, 0.80, 0.70], final: 3.5,
     idleRPM: 1600, redline: 11000, peakRPM: 8200, maxTorque: 1100,
@@ -79,7 +79,7 @@ const CARS = {
   lmh: {
     label: 'Le Mans Prototype', mass: 1030, frontBias: 0.45, cgH: 0.33,
     a: 1.55, b: 1.55, inertia: 1700, rWheel: 0.35,
-    maxSteer: 0.36, brakeForce: 27000, rollDrag: 10, dragCoef: 0.72,
+    maxSteer: 0.36, brakeForce: 27000, brakeBias: 0.6, rollDrag: 10, dragCoef: 0.72,
     aeroDown: 4.0, aeroDrag: 0.22, driveEff: 0.93,
     gears: [3.20, 2.30, 1.78, 1.45, 1.22, 1.05, 0.92], final: 3.4,
     idleRPM: 2000, redline: 9200, peakRPM: 7000, maxTorque: 760,
@@ -162,6 +162,7 @@ const TRACK_DEFS = {
       [198, -10, 15, 0.04, 0], [165, -60, 14, 0.10, 1], [100, -74, 14, 0.10, 1], [38, -58, 14, 0.06, 0.5],
       [6, -44, 15, 0.02, 0],
     ],
+    scale: 2.9, elevScale: 1.5,
     runoff: 9, sectors: [0.34, 0.68],
     drs: [], gravel: [],
   },
@@ -197,6 +198,7 @@ const TRACK_DEFS = {
       [8, -330, 15, 0.04, 0],
       [0, -160, 15, 0, 0],
     ],
+    scale: 2.4, elevScale: 1.5,
     runoff: 14, sectors: [0.36, 0.64],
     drs: [[0.90, 0.14], [0.40, 0.52]], gravel: [[0.22, 0.27], [0.86, 0.93]],
   },
@@ -232,6 +234,7 @@ const TRACK_DEFS = {
       [6, 108, 12, 0.06, 4],
       [2, 60, 14, 0, 3.5],
     ],
+    scale: 3.2, elevScale: 1.5,
     runoff: 12, sectors: [0.30, 0.64],
     drs: [[0.12, 0.14], [0.55, 0.08]], gravel: [[0.26, 0.04], [0.47, 0.04]],
   },
@@ -262,6 +265,7 @@ const TRACK_DEFS = {
       [-52, -70, 12, -0.04, 0],    // Vale (left kink)
       [-28, -44, 13, 0.05, 0],     // Club (right)
     ],
+    scale: 3.0, elevScale: 1.5,
     runoff: 11, sectors: [0.33, 0.66],
     drs: [[0.42, 0.10], [0.62, 0.12]], gravel: [[0.30, 0.04], [0.56, 0.04]],
   },
@@ -292,6 +296,7 @@ const TRACK_DEFS = {
       [8, -110, 14, 0.04, 0],
       [0, -55, 15, 0, 0],
     ],
+    scale: 3.0, elevScale: 1.5,
     runoff: 13, sectors: [0.34, 0.66],
     drs: [[0.84, 0.20], [0.22, 0.18], [0.50, 0.16]], gravel: [[0.13, 0.03], [0.42, 0.03]],
   },
@@ -328,6 +333,7 @@ const TRACK_DEFS = {
       [12, -150, 13, 0.06, 0],
       [2, -80, 14, 0, 0],          // heading north to the line
     ],
+    scale: 2.9, elevScale: 1.5,
     runoff: 11, sectors: [0.34, 0.67],
     drs: [[0.0, 0.08], [0.70, 0.10]], gravel: [[0.10, 0.03], [0.40, 0.04]],
   },
@@ -343,7 +349,8 @@ class Track {
     this.id = id; this.def = def; this.name = def.name; this.country = def.country;
     this.runoff = def.runoff;
 
-    const cps = def.pts.map((p) => new THREE.Vector3(p[0] * 1, p[4] || 0, p[1] * 1));
+    const sc = def.scale ?? 1, esc = def.elevScale ?? 1;
+    const cps = def.pts.map((p) => new THREE.Vector3(p[0] * sc, (p[4] || 0) * esc, p[1] * sc));
     this.curve = new THREE.CatmullRomCurve3(cps, true, 'catmullrom', 0.5);
 
     // per-control auxiliary (width, banking) interpolated by parameter
@@ -613,7 +620,8 @@ class Vehicle {
     let thr, brk;
     if (this.isPlayer) {
       thr = this.thrActual = clamp(this.thrActual + clamp(inp.throttle - this.thrActual, -9 * dt, 3.2 * dt), 0, 1);
-      brk = this.brkActual = clamp(this.brkActual + clamp(inp.brake - this.brkActual, -9 * dt, 1.7 * dt), 0, 1);
+      const rampUp = 1 / Math.max(0.12, this.brakeRamp ?? 0.6);   // seconds from nothing to full pressure
+      brk = this.brkActual = clamp(this.brkActual + clamp(inp.brake - this.brkActual, -9 * dt, rampUp * dt), 0, 1);
       // reverse: holding the brake at a standstill backs the car up; the throttle then brakes you to a stop
       if (!this.reversing && env.racing && inp.brake > 0.5 && inp.throttle < 0.05 && this.vx < 0.5 && this.vx > -0.5) this.reversing = true;
       if (this.reversing && ((thr > 0.05 && Math.abs(this.vx) < 0.3) || this.vx > 1.5)) this.reversing = false;
@@ -631,7 +639,7 @@ class Vehicle {
     // weight / loads
     const aeroDown = c.aeroDown * speed * speed;
     const W = c.mass * 9.81 + aeroDown;
-    const dT = clamp(c.mass * this._ax * c.cgH / (c.a + c.b), -0.42 * W, 0.42 * W);
+    const dT = clamp(c.mass * (this._axPure ?? this._ax) * c.cgH / (c.a + c.b), -0.42 * W, 0.42 * W);
     const Nf = Math.max(0, c.frontBias * W - dT);
     const Nr = Math.max(0, (1 - c.frontBias) * W + dT);
 
@@ -669,11 +677,19 @@ class Vehicle {
     if (this.reversing && this.vx < -7) driveForce = Math.max(driveForce, 0);                              // reverse tops out ~25 km/h
     if (this._shiftT > 0.12) driveForce *= 0.25;                                  // shift cut
 
-    let brakeF = (this.reversing ? thr : brk) * c.brakeForce;
-    if (inp.handbrake) { FyR *= 0.35; brakeF += c.brakeForce * 0.45; }
+    let brakeF = (this.reversing ? thr : brk) * c.brakeForce * (this.isPlayer ? (env.brakeScale ?? 1) : 1);
 
-    // longitudinal traction limit at the driven (rear) axle — excess spins the tyres
+    // Brakes are split front/rear by bias and each axle is limited to the grip it actually has
+    // (an ABS-like cap). Previously the whole brake force was charged against the rear circle,
+    // which wiped out rear lateral grip entirely the moment you touched the brakes -> instant spin.
+    const frontGrip = Nf * gripMul * c.tyre.muPeak;
     const rearGrip = Nr * gripMul * c.tyre.muPeak;
+    let brakeFront = brakeF * c.brakeBias;
+    let brakeRear = brakeF * (1 - c.brakeBias);
+    brakeFront = Math.min(brakeFront, frontGrip * (this.assist ? 0.88 : 0.98));
+    brakeRear = Math.min(brakeRear, rearGrip * (this.assist ? 0.75 : 0.94));
+    if (inp.handbrake) { FyR *= 0.35; brakeRear = rearGrip * 0.98; }  // handbrake deliberately locks the rear
+    brakeF = brakeFront + brakeRear;
     // traction control (always on for keyboard play): keep enough of the friction circle for cornering
     const tractionCap = rearGrip * (this.assist ? 0.70 : 0.92);
     this.wheelSlip = 0;
@@ -688,12 +704,11 @@ class Vehicle {
     let Fx = driveForce - Math.sign(this.vx) * brakeF - drag - roll - surfDecel;
     if (Math.abs(this.vx) < 0.4 && drivePedal < 0.05) Fx = -this.vx * c.mass / dt * 0.6; // hold still
 
-    // friction circle — rear
-    const usedR = Math.abs(driveForce - Math.sign(this.vx) * brakeF * 0.55);
+    // friction circle — each axle only ever spends what it actually has
+    const usedR = Math.abs(driveForce) + brakeRear;
     const FyRmax = Math.sqrt(Math.max(0, rearGrip * rearGrip - usedR * usedR));
     FyR = clamp(FyR, -FyRmax, FyRmax);
-    const frontGrip = Nf * gripMul * c.tyre.muPeak;
-    const usedF = Math.abs(brakeF * 0.45);
+    const usedF = brakeFront;
     const FyFmax = Math.sqrt(Math.max(0, frontGrip * frontGrip - usedF * usedF));
     FyF = clamp(FyF, -FyFmax, FyFmax);
 
@@ -701,10 +716,15 @@ class Vehicle {
     const bankForce = -Math.sin(g.bank) * W * 0.32;
 
     const Fy = FyF + FyR + bankForce;
-    const ax = Fx / c.mass;
+    // Body-frame acceleration must carry BOTH rotating-frame terms:
+    //   dvx/dt = Fx/m + r*vy      dvy/dt = Fy/m - r*vx
+    // With the +r*vy term missing the frame rotation injected energy, so a spin
+    // accelerated the car instead of slowing it (133 -> 262 km/h under full brakes).
+    const ax = Fx / c.mass + this.yawRate * this.vy;
     const ay = Fy / c.mass - this.yawRate * this.vx;
     this.vx += ax * dt;
     this.vy += ay * dt;
+    this._axPure = Fx / c.mass;   // for weight transfer / dive, without the frame term
 
     const Mz = FyF * c.a - FyR * c.b;
     this.yawRate += (Mz / c.inertia) * dt;
@@ -1115,7 +1135,7 @@ const Store = {
   saveGhost(track, mode, frames) { this.local.set(`ghost.${track}.${mode}`, frames); },
 
   settings() {
-    return this.local.get('settings', { vol: 70, cam: 'chase', units: 'kmh', qual: 'med', shadows: true, assist: true });
+    return this.local.get('settings', { vol: 70, cam: 'chase', units: 'kmh', qual: 'med', shadows: true, assist: true, brakeMax: 80, brakeRamp: 60 });
   },
   saveSettings(s) { this.local.set('settings', s); },
 };
@@ -1353,6 +1373,7 @@ class Game {
     this.env = {
       gripMul: this.settings.weather === 'wet' ? 0.74 : 1.0,
       drsOpen: false,
+      brakeScale: clamp((st.brakeMax ?? 80) / 100, 0.4, 1),
       wearScale: modeCfg.tyreWear * (this.settings.practice ? 0.2 : 1),
       fuelScale: modeCfg.fuel * (this.settings.practice ? 0 : 1),
     };
@@ -1360,6 +1381,7 @@ class Game {
     // cars
     this.cars = [];
     this.player = new Vehicle(carCfg, { isPlayer: true, assist: st.assist });
+    this.player.brakeRamp = clamp((st.brakeRamp ?? 60) / 100 * 1.4 + 0.15, 0.15, 1.6);
     this.player.name = Store.profile?.name || 'You';
     this.player.isPlayer = true;
     this.player.livery = Store.livery();
@@ -1385,9 +1407,17 @@ class Game {
     }
 
     // grid — player starts at the back for quick race (more fun), pole in TT/career-first
-    const gridCars = this.cars.slice();
-    if (sessionType === 'quick') gridCars.reverse(); // player last -> starts at back
-    gridCars.forEach((c, i) => c.placeAt(track, track.gridSlot(i)));
+    if (sessionType === 'mp') {
+      // every human takes the slot the server gave them; the AI fill in behind the whole field
+      const myIdx = settings._mp?.gridIndex ?? 0;
+      const humans = settings._mp?.playerCount ?? 1;
+      this.player.placeAt(track, track.gridSlot(myIdx));
+      this.ais.forEach((a, k) => a.v.placeAt(track, track.gridSlot(humans + k)));
+    } else {
+      const gridCars = this.cars.slice();
+      if (sessionType === 'quick') gridCars.reverse(); // player last -> starts at back
+      gridCars.forEach((c, i) => c.placeAt(track, track.gridSlot(i)));
+    }
 
     // ghost
     this.ghost = null; this.ghostFrames = null; this.recFrames = [];
@@ -1707,6 +1737,19 @@ class Game {
     return proj - this.startBest;
   }
   standings() {
+    // Multiplayer: the local car list only holds this browser's own car plus the AI, so building
+    // the order from it made every player show as P1. Use the server's view of the humans instead.
+    if (this.mp && this._mpStandings?.length) {
+      const myId = this.net.socket?.id;
+      const humans = this._mpStandings.map((s) => ({
+        name: s.name, isPlayer: s.id === myId, retired: false,
+        gap: null, lap: s.lap, prog: s.trackProgress || 0,   // already lap + fraction
+      }));
+      const bots = this.ais.map((a) => ({ name: a.v.name, isPlayer: false, retired: a.v.retired, gap: null, lap: a.v.lap, prog: a.v.raceProgress }));
+      const all = [...humans, ...bots].sort((a, b) => b.prog - a.prog);
+      const lead = all[0]?.prog || 0;
+      return all.map((e, i) => ({ name: e.name, isPlayer: e.isPlayer, retired: e.retired, gap: i === 0 ? null : Math.min(999, (lead - e.prog) * this.track.length / 40) }));
+    }
     const arr = this.cars.map((c) => ({ car: c, name: c.name, isPlayer: c === this.player, retired: c.retired, prog: c.raceProgress }));
     arr.sort((a, b) => b.prog - a.prog);
     const leadProg = arr[0]?.prog || 0;
@@ -1827,7 +1870,7 @@ class Game {
   _wireMpRuntime() {
     this.spectator = this.mp.spectator;
     this.isHost = this.mp.isHost;
-    this.net.on('snap', (d) => { this._lastSnap = d; });
+    this.net.on('snap', (d) => { this._lastSnap = d; if (d.standings) this._mpStandings = d.standings; });
     this.net.on('race:standings', (s) => { this._mpStandings = s; });
     this.net.on('race:finished', (d) => { this._mpFinished = d; if (this.running) this._endRaceMp(d); });
     this.net.on('race:respawn', () => this._respawnPlayer());
@@ -1874,7 +1917,8 @@ class Game {
   _endRaceMp(d) {
     this.raceState = 'done'; this.running = false;
     this.audio.silence();
-    this.result = (d.standings || []).map((s, i) => ({ pos: i + 1, name: s.name, isPlayer: false, best: s.bestLap, penalty: s.penaltyMs }));
+    const myId = this.net.socket?.id;
+    this.result = (d.standings || []).map((s, i) => ({ pos: i + 1, name: s.name, isPlayer: s.id === myId, best: s.bestLap, penalty: s.penaltyMs }));
     UI.showResults(this);
   }
 }
@@ -2118,6 +2162,7 @@ const UI = {
   loadSettings() {
     const s = Store.settings();
     $('stSound').checked = !GAME.audio.muted;
+    $('stBrakeMax').value = s.brakeMax ?? 80; $('stBrakeRamp').value = s.brakeRamp ?? 60;
     $('stVol').value = s.vol; $('stCam').value = s.cam; $('stUnits').value = s.units;
     $('stQual').value = s.qual; $('stShadows').checked = s.shadows; $('stAssist').checked = s.assist;
   },
@@ -2125,6 +2170,7 @@ const UI = {
     const s = {
       vol: +$('stVol').value, cam: $('stCam').value, units: $('stUnits').value,
       qual: $('stQual').value, shadows: $('stShadows').checked, assist: $('stAssist').checked,
+      brakeMax: +$('stBrakeMax').value, brakeRamp: +$('stBrakeRamp').value,
       lastDiff: Store.settings().lastDiff,
     };
     Store.saveSettings(s);
@@ -2191,7 +2237,11 @@ const UI = {
     net.on('race:countdown', (d) => {
       // launch the race locally for everyone in the room
       const room = this._lobbyRoom;
-      const mp = { spectator: this._spectator, isHost: room.hostId === net.socket.id, roomCode: room.code };
+      const me = (d?.grid || []).find((x) => x.id === net.socket.id);
+      const mp = {
+        spectator: this._spectator, isHost: room.hostId === net.socket.id, roomCode: room.code,
+        gridIndex: me ? me.gridIndex : (d?.grid || []).length, playerCount: (d?.grid || []).length || 1,
+      };
       // everyone drives their own pick from the "Your car" dropdown if it fits the room's discipline
       const mine = $('mpCar').value;
       const car = MODES[room.settings.mode].cars.includes(mine) ? mine : room.settings.car;

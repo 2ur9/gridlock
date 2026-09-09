@@ -31,6 +31,9 @@ render.yaml         one-click Render blueprint
 | `C` | cycle camera: Chase → Cockpit → Hood → TV Broadcast → Trackside free cam |
 | `R` | recover the car back onto the track |
 | `M` | sound on / off (**off by default**) |
+
+Brake strength and how fast the brakes build when you hold the key are both in **Settings** —
+turn them down if you find yourself over-braking into corners.
 | `Esc` / `P` | pause menu |
 
 Free cam (spectators / trackside view): `W A S D` move, arrows look, `Q`/`E` down/up.
