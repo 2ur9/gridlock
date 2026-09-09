@@ -1,0 +1,18 @@
+# Render Blueprint. In Render: New -> Blueprint -> connect this repo.
+# It creates one free web service that serves the client AND runs the Socket.IO
+# multiplayer server AND talks to your Neon database.
+services:
+  - type: web
+    name: school-racing-sim
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/index.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        sync: false        # paste your Neon pooled connection string in the dashboard
+      - key: TEACHER_KEY
+        sync: false        # optional; leave blank for an open classroom
+      - key: NODE_VERSION
+        value: "20"

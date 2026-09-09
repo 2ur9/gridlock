@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>School Racing Sim</title>
+<style>
+  :root {
+    --bg: #0b0f14; --panel: #141b24; --panel2: #1c2530; --line: #2b3644;
+    --ink: #e8eef5; --dim: #9fb0c3; --accent: #38bdf8; --accent2: #f59e0b;
+    --good: #34d399; --bad: #f87171; --warn: #fbbf24;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; }
+  canvas { display: block; }
+  #app { position: fixed; inset: 0; }
+  #view { position: absolute; inset: 0; }
+
+  /* ---------- Overlay / menu system ---------- */
+  .screen {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    background: radial-gradient(120% 120% at 50% 0%, rgba(20,30,45,.86), rgba(6,9,13,.94));
+    backdrop-filter: blur(3px); z-index: 40; padding: 24px;
+  }
+  .screen.on { display: flex; }
+  .card {
+    width: min(760px, 96vw); max-height: 92vh; overflow: auto; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  }
+  .card.wide { width: min(1040px, 97vw); }
+  h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: .3px; }
+  h2 { font-size: 15px; margin: 18px 0 8px; color: var(--dim); text-transform: uppercase; letter-spacing: 1.5px; }
+  p.sub { margin: 0 0 12px; color: var(--dim); font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  label.field { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--dim); }
+  select, input[type=text], input[type=number], input[type=password] {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 9px; padding: 9px 10px; font: inherit; font-size: 14px; width: 100%;
+  }
+  input[type=color] { width: 100%; height: 38px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel2); }
+  button {
+    background: var(--panel2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px; font: inherit; font-size: 14px; cursor: pointer;
+    transition: transform .04s ease, background .15s ease, border-color .15s ease;
+  }
+  button:hover { background: #263241; border-color: #3a4a5e; }
+  button:active { transform: translateY(1px); }
+  button.primary { background: linear-gradient(180deg, #38bdf8, #0ea5e9); border-color: #0284c7; color: #04222e; font-weight: 700; }
+  button.primary:hover { filter: brightness(1.06); }
+  button.ghost { background: transparent; }
+  button.danger { border-color: #7f1d1d; color: #fca5a5; }
+  .btnrow { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  .spacer { flex: 1; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 12px; }
+  .tile { text-align: left; padding: 16px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer; }
+  .tile:hover { border-color: var(--accent); }
+  .tile b { display: block; font-size: 15px; margin-bottom: 4px; }
+  .tile span { font-size: 12px; color: var(--dim); }
+  .pill { font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #0c1a24; border: 1px solid #1e3a4a; color: var(--accent); }
+  .list { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .list div.item { display: flex; gap: 10px; padding: 8px 12px; font-size: 13px; border-top: 1px solid var(--line); }
+  .list div.item:first-child { border-top: 0; }
+  .list div.item .g { flex: 1; color: var(--dim); }
+  .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
+  .msg.err { color: var(--bad); } .msg.ok { color: var(--good); }
+  .kbd { font-family: ui-monospace, monospace; background: #0c141c; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; font-size: 12px; }
+  .hide { display: none !important; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: absolute; inset: 0; pointer-events: none; z-index: 20; font-variant-numeric: tabular-nums; }
+  #hud .panel { position: absolute; background: rgba(10,15,20,.55); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 10px 12px; }
+  #dash { right: 16px; bottom: 16px; text-align: right; min-width: 190px; }
+  #dash .spd { font-size: 46px; font-weight: 800; line-height: .96; }
+  #dash .spd small { font-size: 13px; font-weight: 600; color: var(--dim); }
+  #dash .gear { font-size: 15px; color: var(--accent2); font-weight: 700; letter-spacing: 1px; }
+  #rpm { height: 8px; border-radius: 5px; background: #0c141c; overflow: hidden; margin-top: 8px; border: 1px solid rgba(255,255,255,.06); }
+  #rpm > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #34d399, #fbbf24 72%, #f87171 90%); transition: width .05s linear; }
+  #rpm.red > i { background: #f87171; }
+  #timing { left: 16px; top: 16px; min-width: 210px; }
+  #timing .lap { font-size: 22px; font-weight: 800; }
+  #timing .rowline { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); margin-top: 2px; }
+  #timing .delta.p { color: var(--good); } #timing .delta.n { color: var(--bad); }
+  #pos { left: 16px; top: 118px; font-size: 13px; }
+  #pos b { font-size: 20px; }
+  #board { right: 16px; top: 16px; min-width: 220px; font-size: 12px; }
+  #board .r { display: flex; gap: 8px; padding: 2px 0; }
+  #board .r .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #board .r.me { color: var(--accent); font-weight: 700; }
+  #board .r .gap { color: var(--dim); }
+  #wear { left: 16px; bottom: 16px; min-width: 180px; font-size: 11px; color: var(--dim); }
+  #wear .bar { height: 7px; background: #0c141c; border-radius: 4px; overflow: hidden; margin: 3px 0 8px; }
+  #wear .bar > i { display: block; height: 100%; background: var(--accent); }
+  #mini { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(10,15,20,.5); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 6px; }
+  #flag { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); font-weight: 800; letter-spacing: 2px; font-size: 18px; padding: 6px 18px; border-radius: 10px; display: none; }
+  #flag.on { display: block; }
+  #flag.yellow { background: #fde047; color: #422006; }
+  #flag.blue { background: #3b82f6; color: #fff; }
+  #flag.checd { background: #fff; color: #111; }
+  #flag.drs { background: var(--good); color: #05231a; }
+  #cc { position: absolute; left: 16px; top: 168px; font-size: 11px; color: var(--dim); text-align: left; line-height: 1.7; }
+  #centre { position: absolute; left: 50%; top: 42%; transform: translate(-50%,-50%); text-align: center; font-weight: 900; font-size: 68px; text-shadow: 0 6px 30px rgba(0,0,0,.6); display: none; }
+  #centre.on { display: block; }
+  #centre small { display:block; font-size: 18px; font-weight: 700; color: var(--dim); letter-spacing: 3px; }
+  #toast { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); background: rgba(10,15,20,.8); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; font-size: 13px; opacity: 0; transition: opacity .25s; }
+  #toast.on { opacity: 1; }
+  #esc { position: absolute; right: 16px; bottom: 214px; pointer-events: auto; padding: 6px 12px; font-size: 12px; }
+
+  #boot { position: absolute; inset: 0; display: grid; place-items: center; z-index: 60; background: var(--bg); }
+  #boot .b { text-align: center; color: var(--dim); font-size: 13px; }
+  #boot h1 { font-size: 26px; color: var(--ink); margin-bottom: 6px; }
+  #err { position: absolute; left: 12px; bottom: 12px; right: 12px; max-height: 40vh; overflow: auto; background: #2a1215; border: 1px solid #7f1d1d; color: #fecaca; font: 12px/1.5 ui-monospace, monospace; padding: 10px 12px; border-radius: 10px; z-index: 80; white-space: pre-wrap; display: none; }
+  .mpstatus { font-size: 12px; color: var(--dim); }
+  .mpstatus b.ok { color: var(--good); } .mpstatus b.bad { color: var(--bad); }
+  .tag { display:inline-block; font-size:11px; padding:1px 7px; border:1px solid var(--line); border-radius:6px; color:var(--dim); margin-left:6px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hide">
+    <div id="timing" class="panel">
+      <div class="lap" id="hudLap">0:00.000</div>
+      <div class="rowline"><span>Lap <b id="hudLapNo">1/3</b></span><span class="delta" id="hudDelta">--</span></div>
+      <div class="rowline"><span id="hudBest">Best --</span><span id="hudLast">Last --</span></div>
+    </div>
+    <div id="pos" class="panel">P<b id="hudPos">1</b> <span id="hudPosOf" class="g">/ 1</span></div>
+    <div id="board" class="panel"></div>
+    <div id="dash" class="panel">
+      <div class="spd"><span id="hudSpd">0</span><small> km/h</small></div>
+      <div class="gear">GEAR <span id="hudGear">N</span></div>
+      <div id="rpm"><i id="hudRpm"></i></div>
+    </div>
+    <div id="wear" class="panel">
+      <div>TYRES <span id="hudTyrePct">100%</span></div><div class="bar"><i id="hudTyre" style="width:100%"></i></div>
+      <div>FUEL <span id="hudFuelPct">100%</span></div><div class="bar"><i id="hudFuel" style="width:100%;background:var(--accent2)"></i></div>
+    </div>
+    <canvas id="mini" width="196" height="132"></canvas>
+    <div id="flag"></div>
+    <div id="centre"></div>
+    <div id="cc">CAM: <span id="hudCam">Chase</span><br><span class="kbd">C</span> camera &nbsp; <span class="kbd">R</span> reset &nbsp; <span class="kbd">Esc</span> menu</div>
+    <div id="toast"></div>
+    <button id="esc" class="ghost">Menu (Esc)</button>
+  </div>
+
+  <!-- ================= SCREENS ================= -->
+  <div id="scr-main" class="screen">
+    <div class="card">
+      <h1>School Racing Sim <span class="tag" id="verTag">v1</span></h1>
+      <p class="sub">Keyboard racing simulator · <span class="kbd">↑</span><span class="kbd">↓</span><span class="kbd">←</span><span class="kbd">→</span> or <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> · <span class="kbd">Space</span> handbrake · <span class="kbd">C</span> camera</p>
+      <div id="whoami" class="mpstatus" style="margin-bottom:12px"></div>
+      <h2>Single player</h2>
+      <div class="tiles">
+        <button class="tile" data-go="quick"><b>Quick Race</b><span>Pick a track &amp; class, race a grid of AI.</span></button>
+        <button class="tile" data-go="tt"><b>Time Trial</b><span>Empty track. Chase your own ghost lap.</span></button>
+        <button class="tile" data-go="career"><b>Career / Season</b><span>A calendar of rounds, championship points.</span></button>
+      </div>
+      <h2>Together</h2>
+      <div class="tiles">
+        <button class="tile" data-go="mp"><b>Multiplayer</b><span>Host or join a race with a room code.</span></button>
+        <button class="tile" data-go="garage"><b>Garage</b><span>Paint your car. Saved to your profile.</span></button>
+        <button class="tile" data-go="profile"><b>Profile</b><span>Class code + name. Saves best laps &amp; career.</span></button>
+      </div>
+      <div class="btnrow">
+        <button id="btnSettings" class="ghost">Settings</button>
+        <div class="spacer"></div>
+        <button class="ghost" id="btnAbout">About / Help</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="scr-setup" class="screen">
+    <div class="card">
+      <h1 id="setupTitle">Quick Race</h1>
+      <p class="sub" id="setupSub"></p>
+      <div class="grid">
+        <label class="field">Track<select id="selTrack"></select></label>
+        <label class="field">Discipline<select id="selMode"><option value="gt">GT</option><option value="f1">Formula</option></select></label>
+        <label class="field">Weather<select id="selWx"><option value="dry">Dry</option><option value="wet">Wet</option></select></label>
+        <label class="field" id="fLaps">Laps<input type="number" id="selLaps" min="1" max="30" value="3" /></label>
+        <label class="field" id="fAi">AI cars<input type="number" id="selAi" min="0" max="15" value="7" /></label>
+        <label class="field" id="fDiff">AI level<select id="selDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="pro">Pro</option></select></label>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="selPractice" style="width:auto" /> Practice mode <span class="tag">no timing pressure / penalties</span></label>
+      </div>
+      <div class="btnrow">
+        <button class="ghost" data-back>Back</button>
+        <div class="spacer"></div>
+        <button class="primary" id="btnGo">Start</button>
+      </div>
+      <div class="msg" id="setupMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-career" class="screen">
+    <div class="card wide">
+      <h1>Career — Season</h1>
+      <p class="sub">Points: 25-18-15-12-10-8-6-4-2-1. Finish the calendar to be crowned champion.</p>
+      <div class="grid">
+        <label class="field">Season<select id="selSeason"></select></label>
+        <label class="field">AI level (whole season)<select id="selSeasonDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="pro">Pro</option></select></label>
+        <div class="field" style="justify-content:flex-end"><button class="ghost" id="btnCareerReset">Reset progress</button></div>
+      </div>
+      <h2>Calendar</h2>
+      <div class="list" id="careerRounds"></div>
+      <h2>Championship standings</h2>
+      <div class="list" id="careerStandings"></div>
+      <div class="btnrow">
+        <button class="ghost" data-back>Back</button>
+        <div class="spacer"></div>
+        <button class="primary" id="btnCareerNext">Race next round</button>
+      </div>
+      <div class="msg" id="careerMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-mp" class="screen">
+    <div class="card">
+      <h1>Multiplayer</h1>
+      <p class="sub mpstatus" id="mpConn">Connecting…</p>
+      <div id="mpHome">
+        <div class="grid">
+          <label class="field">Your name<input type="text" id="mpName" maxlength="24" placeholder="e.g. Sam" /></label>
+        </div>
+        <h2>Host a race</h2>
+        <div class="grid">
+          <label class="field">Track<select id="mpTrack"></select></label>
+          <label class="field">Discipline<select id="mpMode"><option value="gt">GT</option><option value="f1">Formula</option></select></label>
+          <label class="field">Weather<select id="mpWx"><option value="dry">Dry</option><option value="wet">Wet</option></select></label>
+          <label class="field">Laps<input type="number" id="mpLaps" min="1" max="30" value="3" /></label>
+          <label class="field">AI cars<input type="number" id="mpAi" min="0" max="15" value="4" /></label>
+          <label class="field">AI level<select id="mpDiff"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option><option value="pro">Pro</option></select></label>
+        </div>
+        <div class="btnrow"><button class="primary" id="btnHost">Create room</button></div>
+        <h2>Join a race</h2>
+        <div class="row">
+          <input type="text" id="mpCode" maxlength="4" placeholder="CODE" style="text-transform:uppercase; max-width:130px; letter-spacing:4px; font-weight:700" />
+          <button id="btnJoin">Join</button>
+          <button class="ghost" id="btnSpectate">Join as spectator</button>
+        </div>
+      </div>
+      <div id="mpLobby" class="hide">
+        <h2>Room <span class="pill" id="lobbyCode">----</span> <span id="lobbyHostTag" class="tag hide">you host</span></h2>
+        <div id="lobbySettings" class="mpstatus" style="margin-bottom:8px"></div>
+        <div class="list" id="lobbyPlayers"></div>
+        <div class="btnrow">
+          <button class="ghost" id="btnLeaveRoom">Leave</button>
+          <button id="btnReady">Ready</button>
+          <div class="spacer"></div>
+          <button class="primary hide" id="btnStartRace">Start race</button>
+        </div>
+        <div id="hostControls" class="hide">
+          <h2>Host controls</h2>
+          <div class="row" id="hostResetRow"></div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="ghost" data-back>Back to menu</button></div>
+      <div class="msg" id="mpMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-garage" class="screen">
+    <div class="card">
+      <h1>Garage</h1>
+      <p class="sub">Livery is saved to your profile if you're logged in, otherwise to this browser.</p>
+      <div class="grid">
+        <label class="field">Base colour<input type="color" id="gBase" value="#d21f3c" /></label>
+        <label class="field">Accent colour<input type="color" id="gAccent" value="#ffffff" /></label>
+        <label class="field">Pattern<select id="gPattern"><option value="solid">Solid</option><option value="stripe">Centre stripe</option><option value="split">Split</option><option value="halo">Halo</option></select></label>
+        <label class="field">Race number<input type="number" id="gNumber" min="1" max="99" value="7" /></label>
+      </div>
+      <div class="btnrow"><button class="ghost" data-back>Back</button><div class="spacer"></div><button class="primary" id="btnSaveLivery">Save</button></div>
+      <div class="msg" id="garageMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-profile" class="screen">
+    <div class="card">
+      <h1>Profile</h1>
+      <p class="sub" id="profState"></p>
+      <div class="grid">
+        <label class="field">Class code<input type="text" id="pfCode" maxlength="12" placeholder="RACE-7B" style="text-transform:uppercase" list="classList" /></label>
+        <label class="field">Your name<input type="text" id="pfName" maxlength="24" placeholder="e.g. Sam" /></label>
+      </div>
+      <datalist id="classList"></datalist>
+      <div class="btnrow">
+        <button class="primary" id="btnLogin">Log in / create</button>
+        <button class="ghost" id="btnLogout">Log out</button>
+      </div>
+      <div id="pfDetails" class="hide">
+        <h2>Best laps</h2>
+        <div class="list" id="pfBest"></div>
+      </div>
+      <details style="margin-top:16px">
+        <summary style="cursor:pointer;color:var(--dim);font-size:13px">Teacher — create a class code</summary>
+        <div class="grid" style="margin-top:10px">
+          <label class="field">New code<input type="text" id="tcCode" maxlength="12" placeholder="RACE-7B" style="text-transform:uppercase" /></label>
+          <label class="field">Label<input type="text" id="tcLabel" maxlength="40" placeholder="Period 3 · Yr 9" /></label>
+          <label class="field">Teacher key <span class="tag">if the server requires one</span><input type="password" id="tcKey" /></label>
+        </div>
+        <div class="btnrow"><button id="btnMakeClass">Create class code</button></div>
+        <div class="msg" id="tcMsg"></div>
+      </details>
+      <div class="btnrow"><button class="ghost" data-back>Back</button></div>
+      <div class="msg" id="profMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-settings" class="screen">
+    <div class="card">
+      <h1>Settings</h1>
+      <div class="grid">
+        <label class="field">Master volume<input type="range" id="stVol" min="0" max="100" value="70" /></label>
+        <label class="field">Default camera<select id="stCam"><option value="chase">Chase</option><option value="cockpit">Cockpit</option><option value="hood">Hood</option><option value="tv">TV broadcast</option></select></label>
+        <label class="field">Speed units<select id="stUnits"><option value="kmh">km/h</option><option value="mph">mph</option></select></label>
+        <label class="field">Quality<select id="stQual"><option value="high">High</option><option value="med" selected>Medium</option><option value="low">Low</option></select></label>
+        <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="stShadows" style="width:auto" checked /> Shadows</label>
+        <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="stAssist" style="width:auto" checked /> Steering assist (recommended for keyboard)</label>
+      </div>
+      <div class="btnrow"><button class="ghost" data-back>Back</button><div class="spacer"></div><button class="primary" id="btnSaveSettings">Save</button></div>
+      <div class="msg" id="setMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-results" class="screen">
+    <div class="card wide">
+      <h1 id="resTitle">Race Result</h1>
+      <p class="sub" id="resSub"></p>
+      <div class="list" id="resTable"></div>
+      <div class="btnrow" id="resBtns"></div>
+      <div class="msg" id="resMsg"></div>
+    </div>
+  </div>
+
+  <div id="scr-pause" class="screen">
+    <div class="card">
+      <h1>Paused</h1>
+      <div class="btnrow">
+        <button class="primary" id="btnResume">Resume</button>
+        <button id="btnRestart">Restart session</button>
+        <button class="ghost" id="btnPauseCam">Cycle camera</button>
+        <div class="spacer"></div>
+        <button class="danger" id="btnQuit">Quit to menu</button>
+      </div>
+      <div class="msg" id="pauseMsg"></div>
+    </div>
+  </div>
+
+  <div id="boot"><div class="b"><h1>School Racing Sim</h1><div id="bootMsg">loading engine…</div></div></div>
+  <pre id="err"></pre>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="./game.js"></script>
+</body>
+</html>
