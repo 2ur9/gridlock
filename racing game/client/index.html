@@ -142,7 +142,7 @@
     <canvas id="mini" width="196" height="132"></canvas>
     <div id="flag"></div>
     <div id="centre"></div>
-    <div id="cc">CAM: <span id="hudCam">Chase</span><br><span class="kbd">C</span> camera &nbsp; <span class="kbd">R</span> reset &nbsp; <span class="kbd">Esc</span> menu</div>
+    <div id="cc">CAM: <span id="hudCam">Chase</span><br><span class="kbd">C</span> camera &nbsp; <span class="kbd">R</span> reset &nbsp; <span class="kbd">M</span> sound &nbsp; <span class="kbd">Esc</span> menu</div>
     <div id="toast"></div>
     <button id="esc" class="ghost">Menu (Esc)</button>
   </div>
@@ -319,6 +319,7 @@
     <div class="card">
       <h1>Settings</h1>
       <div class="grid">
+        <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="stSound" style="width:auto" /> Sound <span class="tag">off by default · <span class="kbd">M</span> toggles</span></label>
         <label class="field">Master volume<input type="range" id="stVol" min="0" max="100" value="70" /></label>
         <label class="field">Default camera<select id="stCam"><option value="chase">Chase</option><option value="cockpit">Cockpit</option><option value="hood">Hood</option><option value="tv">TV broadcast</option></select></label>
         <label class="field">Speed units<select id="stUnits"><option value="kmh">km/h</option><option value="mph">mph</option></select></label>
@@ -365,6 +366,6 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
 } }
 </script>
-<script type="module" src="./game.js"></script>
+<script type="module" src="./game.js?v=9"></script>
 </body>
 </html>

@@ -632,7 +632,7 @@ export function buildWorld(track, scene, quality, weather) {
     const dist = wallOff(sm) + 4.5;
     const p = sm.pos.clone().addScaledVector(sm.left, side * dist);
     g.position.set(p.x, groundY(p.x, p.z), p.z);
-    g.rotation.y = Math.atan2(sm.tan.x, sm.tan.z) + (side > 0 ? Math.PI / 2 : -Math.PI / 2);
+    g.rotation.y = Math.atan2(sm.tan.x, sm.tan.z) + (side > 0 ? -Math.PI / 2 : Math.PI / 2);   // seats face the track
     scene.add(g);
     return i;
   };
@@ -688,7 +688,7 @@ export function buildWorld(track, scene, quality, weather) {
     for (let k = 0; k < roofPeople; k++) { col.setHSL(rng(), 0.6, 0.5); placeInstance(rc, k, (rng() - 0.5) * (len - 4), 9.95, 4 + rng() * 3, rng() * 6, 1, 1.1, 1, col); }
     b.add(rc);
     const p = sm.pos.clone().addScaledVector(sm.left, sm.width / 2 + 21);
-    b.position.set(p.x, sm.y, p.z); b.rotation.y = Math.atan2(sm.tan.x, sm.tan.z) + Math.PI / 2;
+    b.position.set(p.x, sm.y, p.z); b.rotation.y = Math.atan2(sm.tan.x, sm.tan.z) - Math.PI / 2;   // garages face the pit lane / track
     scene.add(b);
   }
 
@@ -1322,11 +1322,22 @@ export const CarFactory = {
     const blob = new THREE.Mesh(new THREE.CircleGeometry(modeId === 'f1' ? 1.9 : 1.6, 18), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false }));
     blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.scale.set(1, 1.35, 1); g.add(blob);
     g.userData.modeId = modeId;
-    // body-tilt pivot at roughly chassis height so dive / squat / banking rotate about the car, not the ground
+    // Two pivots at chassis height:
+    //   tilt  – follows the road (slope + banking): rotates the whole car, wheels included
+    //   body  – dynamic dive / squat / lean: rotates the bodywork only, wheels stay on the road
     const outer = new THREE.Group();
     const tilt = new THREE.Group(); tilt.position.y = 0.42; outer.add(tilt);
     g.position.y -= 0.42; tilt.add(g);
-    outer.userData = { ...g.userData, tilt, inner: g };
+    let body = null;
+    const wheelSet = new Set(g.userData.wheels || []);
+    const wheelsAreDirectChildren = [...wheelSet].every((w) => w.parent === g);
+    if (wheelSet.size && wheelsAreDirectChildren) {
+      body = new THREE.Group(); body.position.y = 0.42;
+      const inner = new THREE.Group(); inner.position.y = -0.42; body.add(inner);
+      for (const ch of [...g.children]) if (!wheelSet.has(ch)) inner.add(ch);
+      g.add(body);
+    }
+    outer.userData = { ...g.userData, tilt, body, inner: g };
     return outer;
   },
 

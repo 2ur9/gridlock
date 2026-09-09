@@ -28,8 +28,11 @@ app.get('/healthz', async (_req, res) => {
 app.use('/api', api);
 
 // Static client. index.html is the whole game; served at "/".
-app.use(express.static(CLIENT_DIR, { extensions: ['html'], maxAge: '1h' }));
-app.get('/', (_req, res) => res.sendFile(path.join(CLIENT_DIR, 'index.html')));
+// No caching of the game files: browsers must revalidate every load (ETag makes that cheap),
+// otherwise students keep running a stale game.js for an hour after every deploy.
+const noStore = (res) => res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+app.use(express.static(CLIENT_DIR, { extensions: ['html'], etag: true, lastModified: true, maxAge: 0, setHeaders: noStore }));
+app.get('/', (_req, res) => { noStore(res); res.sendFile(path.join(CLIENT_DIR, 'index.html')); });
 
 const server = http.createServer(app);
 const io = new IOServer(server, {

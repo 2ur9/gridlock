@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import * as THREE from 'three';
-import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js';
+import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=9';
 
 /* ---------- error surface ---------------------------------------------------- */
 const errBox = document.getElementById('err');
@@ -449,10 +449,15 @@ class Track {
     const sm = S[best];
     const dx = x - sm.pos.x, dz = z - sm.pos.z;
     const lateral = dx * sm.left.x + dz * sm.left.z;   // + = left
+    // height: interpolate along the track between neighbouring samples (matches the road mesh),
+    // otherwise a car on a 10° climb would step up 30 cm every sample
+    const along = dx * sm.tan.x + dz * sm.tan.z;
+    const nb = along >= 0 ? S[(best + 1) % N] : S[(best - 1 + N) % N];
+    const seg = Math.max(0.1, sm.pos.distanceTo(nb.pos));
+    const grade = (nb.y - sm.y) / seg;
     return {
       i: best, s: sm.s, lateral, width: sm.width, curv: sm.curv, tgt: sm.tgt,
-      y: sm.y + Math.abs(lateral) * Math.sin(sm.bank) * (lateral > 0 ? -Math.sign(sm.bank) : Math.sign(sm.bank)) * 0,
-      groundY: sm.y + Math.sin(sm.bank) * clamp(lateral, -sm.width * 0.5, sm.width * 0.5),
+      groundY: sm.y + grade * Math.abs(along) + Math.sin(sm.bank) * clamp(lateral, -sm.width * 0.5, sm.width * 0.5),
       leftX: sm.left.x, leftZ: sm.left.z, tanYaw: Math.atan2(sm.tan.x, sm.tan.z),
       bank: sm.bank,
     };
@@ -591,7 +596,7 @@ class Vehicle {
     const gripMul = surf.grip * env.gripMul * wornGrip;
 
     // curb bump
-    if (surf.bump && speed > 4 && Math.random() < 0.3) this.pos.y += 0.02;
+    if (surf.bump && speed > 4 && Math.random() < 0.3) { this.pitch += (Math.random() - 0.5) * 0.012; this.roll += (Math.random() - 0.5) * 0.012; }
 
     // weight / loads
     const aeroDown = c.aeroDown * speed * speed;
@@ -715,15 +720,16 @@ class Vehicle {
     // ground height follow: road surface incl. banking, +3 cm of tarmac, kerbs a touch higher
     const g3 = track.sample(this.pos.x, this.pos.z, this._hint);
     const gY = g3.groundY + (surf.kind === 'curb' ? 0.06 : surf.kind === 'tarmac' ? 0.03 : 0);
-    this.pos.y = lerp(this.pos.y, gY, clamp(dt * 45, 0, 1));
+    this.pos.y = gY;   // exact: any smoothing here lags on Spa's climbs and buries the tyres
 
     // road gradient & banking under the car -> the body follows the road (no more nose in the hill)
     const N = track.N, sA = track.samples[(g3.i - 2 + N) % N], sB = track.samples[(g3.i + 2) % N];
     const grade = (sB.y - sA.y) / Math.max(1, sA.pos.distanceTo(sB.pos));
     const dYaw = this.yaw - g3.tanYaw;
     const onRoad = 1 - smoothstep(g3.width * 0.5 + 1.6, g3.width * 0.5 + 6, Math.abs(g3.lateral));
-    this.slopePitch = lerp(this.slopePitch || 0, -Math.atan(grade) * Math.cos(dYaw) - g3.bank * Math.sin(dYaw) * onRoad, clamp(dt * 8, 0, 1));
-    this.bankRoll = lerp(this.bankRoll || 0, -g3.bank * Math.cos(dYaw) * onRoad, clamp(dt * 8, 0, 1));
+    this.slopePitch = lerp(this.slopePitch || 0, -Math.atan(grade) * Math.cos(dYaw) - g3.bank * Math.sin(dYaw) * onRoad, clamp(dt * 25, 0, 1));
+    // local +x is the car's LEFT (see worldVel); bank>0 raises the left edge, so roll +x up
+    this.bankRoll = lerp(this.bankRoll || 0, g3.bank * Math.cos(dYaw) * onRoad, clamp(dt * 25, 0, 1));
 
     // dynamic attitude: gentle dive / squat / lean (rotates about the chassis pivot, see CarFactory)
     this.pitch = lerp(this.pitch, clamp(-this._ax * 0.0035, -0.03, 0.03), clamp(dt * 6, 0, 1));
@@ -821,13 +827,26 @@ class AI {
    =========================================================================== */
 
 class Audio {
-  constructor() { this.ok = false; this.master = 0.7; }
+  // Sound is OFF unless the player explicitly turns it on (Settings, or the M key).
+  constructor() {
+    this.ok = false; this.master = 0.7;
+    let m = true; try { m = JSON.parse(localStorage.getItem('srs.sound') || 'false') !== true; } catch {}
+    this.muted = m;
+  }
+  _applyGain() { if (this.mGain) this.mGain.gain.value = this.muted ? 0 : this.master; }
+  setMuted(v) {
+    this.muted = !!v;
+    try { localStorage.setItem('srs.sound', JSON.stringify(!this.muted)); } catch {}
+    this._applyGain();
+    if (this.muted) this.silence();
+  }
+  toggleMute() { this.setMuted(!this.muted); return this.muted; }
   ensure() {
     if (this.ctx) return;
     try {
       const C = window.AudioContext || window.webkitAudioContext;
       this.ctx = new C();
-      const m = this.ctx.createGain(); m.gain.value = this.master; m.connect(this.ctx.destination); this.mGain = m;
+      const m = this.ctx.createGain(); m.gain.value = this.muted ? 0 : this.master; m.connect(this.ctx.destination); this.mGain = m;
 
       // engine
       this.eng = this.ctx.createOscillator(); this.eng.type = 'sawtooth';
@@ -854,7 +873,7 @@ class Audio {
       this.ok = true;
     } catch (e) { showErr('audio: ' + e.message); }
   }
-  setMaster(v) { this.master = v; if (this.mGain) this.mGain.gain.value = v; }
+  setMaster(v) { this.master = v; this._applyGain(); }
   /** Fade the continuous loops (engine / tyre / wind) to silence — call when leaving the track. */
   silence() {
     if (!this.ok) return;
@@ -1222,6 +1241,7 @@ class Game {
       if (this._typing()) return;
       if (k === 'c') { const l = this.rig.cycle(); this.hud.toast('Camera: ' + l); }
       if (k === 'r' && this.running) this._respawnPlayer();
+      if (k === 'm') { this.audio.ensure(); const muted = this.audio.toggleMute(); this.hud.toast(muted ? 'Sound off' : 'Sound on'); }
       if ((k === 'escape' || k === 'p') && this.running) this.togglePause();
     });
     addEventListener('keyup', (e) => { this.keys[e.key.toLowerCase()] = false; });
@@ -1549,6 +1569,8 @@ class Game {
         c.lapStart = this.raceClock;
         c.lapValid = true; c.sectorT = [null, null, null];
         if (c === this.player && this.sessionType === 'tt') this.recFrames = [];
+      } else if ((this.raceClock - c.lapStart) < 6) {
+        // shoved back and forth across the line (grid contact, spins): not a lap
       } else {
         const lapMs = (this.raceClock - c.lapStart) * 1000;
         c.lastLap = lapMs;
@@ -1673,8 +1695,14 @@ class Game {
       if (!c.mesh) continue;
       c.mesh.position.copy(c.pos);
       c.mesh.rotation.set(0, c.yaw, 0);
-      const tilt = c.mesh.userData.tilt;
-      if (tilt) tilt.rotation.set(c.pitch + (c.slopePitch || 0), 0, c.roll + (c.bankRoll || 0));
+      const tilt = c.mesh.userData.tilt, body = c.mesh.userData.body;
+      if (body) {
+        if (tilt) tilt.rotation.set(c.slopePitch || 0, 0, c.bankRoll || 0);   // road: wheels + body
+        body.rotation.set(c.pitch, 0, c.roll);                                 // dive / squat / lean: body only
+      } else if (tilt) {
+        // single-piece model (458): fold a reduced dynamic tilt in so the tyres barely leave the road
+        tilt.rotation.set((c.slopePitch || 0) + c.pitch * 0.4, 0, (c.bankRoll || 0) + c.roll * 0.4);
+      }
       const ws = c.mesh.userData.wheels;
       if (ws) { const sp = c.speed / c.cfg.rWheel * dt; for (let i = 0; i < ws.length; i++) { ws[i].rotation.x += sp; if (i < 2) ws[i].rotation.y = c.steerActual * 0.42; } }
       const flap = c.mesh.userData.drsFlap;
@@ -2059,6 +2087,7 @@ const UI = {
   /* ----- settings ----- */
   loadSettings() {
     const s = Store.settings();
+    $('stSound').checked = !GAME.audio.muted;
     $('stVol').value = s.vol; $('stCam').value = s.cam; $('stUnits').value = s.units;
     $('stQual').value = s.qual; $('stShadows').checked = s.shadows; $('stAssist').checked = s.assist;
   },
@@ -2069,6 +2098,7 @@ const UI = {
       lastDiff: Store.settings().lastDiff,
     };
     Store.saveSettings(s);
+    GAME.audio.setMuted(!$('stSound').checked);
     GAME.audio.setMaster(s.vol / 100);
     $('setMsg').textContent = 'Saved.'; $('setMsg').className = 'msg ok';
   },
