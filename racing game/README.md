@@ -1,7 +1,7 @@
 # School Racing Sim
 
 A browser racing simulator for classroom use. Sim-style handling (weight transfer, slip-curve tyres,
-friction circle, aero, surface grip), six real-inspired circuits, Formula and GT disciplines, AI grids with
+friction circle, aero, surface grip), seven real-inspired circuits, Formula and GT disciplines, AI grids with
 four difficulty levels, qualifying-style time trial with ghost laps, a data-driven career season, flags,
 static wet/dry weather, procedural engine/tyre/impact sound, five cameras (cockpit with a working wheel,
 dash and live rear-view mirror), class-code student accounts, and room-code multiplayer.
@@ -107,9 +107,11 @@ spline, sampled every ~4 m. From the samples the game derives the racing line, p
 spots. Layouts are modelled from public knowledge of each circuit's corner sequence at roughly half scale —
 no scanned or game-extracted data. Add a track by adding an entry; nothing else changes.
 
-The six circuits: a training oval, Monza (straights + chicanes), Spa (elevation, Eau Rouge, La Source),
+The seven circuits: a training oval, Monza (straights + chicanes), Spa (elevation, Eau Rouge, La Source),
 Silverstone (flowing esses), Nurburgring GP (technical), and **Alpenring** - a power circuit with three
 very long climbing/descending straights and only six corners, the highest average speed of the set.
+**Albert Park** (Melbourne) is the one circuit modelled at true scale - 5,278 m and 14 turns, so a lap
+takes well over a minute even in the Formula car.
 
 **Scenery** (`world.js`) — a heightfield terrain that follows track elevation, procedural grass/asphalt/gravel
 textures with normal maps, kerbs, edge lines, armco with posts, catch fencing, tyre walls on the tight
@@ -124,8 +126,12 @@ its real interior and steering wheel used for the cockpit view. If the model can
 procedural GT is built instead. The Formula car is fully procedural (rounded-box tub, wings with a moving DRS
 flap, halo, suspension, compound-coloured tyre bands).
 
-**AI** — pure-pursuit steering on the racing line, target speed from curvature with a braking look-ahead;
-difficulty scales pace, aggression (overtake/defend nudges), and mistake rate. Stuck cars auto-recover.
+**AI** — pure-pursuit steering plus a cross-track term that pulls back onto the racing line.
+Corner speeds come from each car's real grip (mechanical + downforce evaluated at the speed that
+corner is taken at), and braking points are solved from stopping distance with a margin, reduced
+when running downhill. Difficulty scales pace, top speed, braking skill, how tightly the line is
+held, reaction speed, and how often/badly they err. Pro is roughly 15-20% faster than Easy and
+stays on the road. Stuck cars auto-recover.
 
 **Multiplayer** (`server/rooms.js`) — rooms live in memory keyed by a 4-letter code. Each player's car is
 simulated in their own browser; the server collects everyone's state and rebroadcasts one snapshot at 20 Hz;

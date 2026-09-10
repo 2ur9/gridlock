@@ -1461,27 +1461,33 @@ export function buildCockpit(carGroup, renderer) {
     wheelPivot.visible = false;
     cp.userData.externalWheel = carGroup.userData.steerWheel;
   } else if (kind === 'gt') {
-    // dashboard
-    add(new RoundedBoxGeometry(1.7, 0.36, 0.55, 3, 0.08), leather, 0, eye.y - 0.16, eye.z + 0.78);
-    add(new RoundedBoxGeometry(1.75, 0.08, 0.7, 2, 0.03), alcan, 0, eye.y + 0.02, eye.z + 0.92, -0.35);
-    add(new RoundedBoxGeometry(0.48, 0.2, 0.2, 2, 0.05), dark, eye.x, eye.y - 0.03, eye.z + 0.62, 0.25);
-    add(new THREE.PlaneGeometry(0.42, 0.16), dispMat, eye.x, eye.y - 0.02, eye.z + 0.515, 0.25, Math.PI, 0);
-    // centre console + gear paddle-ish detail
-    add(new RoundedBoxGeometry(0.34, 0.5, 0.55, 2, 0.04), dark, 0, eye.y - 0.42, eye.z + 0.5);
-    // door cards
-    for (const s of [-1, 1]) add(new RoundedBoxGeometry(0.08, 0.42, 1.6, 2, 0.03), leather, s * 0.86, eye.y - 0.22, eye.z + 0.1);
-    // A pillars + roof header
-    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.09, 0.7, 0.09), dark, s * 0.8, eye.y + 0.22, eye.z + 0.95, 0.75, 0, s * 0.18);
-    add(new RoundedBoxGeometry(1.75, 0.12, 0.25, 2, 0.03), dark, 0, eye.y + 0.42, eye.z + 0.6);
-    // rear view mirror
-    add(new RoundedBoxGeometry(0.34, 0.11, 0.03, 2, 0.01), dark, 0, eye.y + 0.3, eye.z + 0.62, -0.15);
-    const mir = add(new THREE.PlaneGeometry(0.31, 0.09), mirrorMat, 0, eye.y + 0.3, eye.z + 0.60, -0.15, Math.PI, 0);
-    // wheel
-    wheelPivot.position.set(eye.x, eye.y - 0.14, eye.z + 0.5); wheelPivot.rotation.x = 0.32;
-    add(new THREE.TorusGeometry(0.175, 0.024, 10, 36), alcan, 0, 0, 0, 0, 0, 0, wheel);
-    for (const a of [0, 2.1, -2.1]) add(new THREE.BoxGeometry(0.03, 0.17, 0.02), dark, Math.sin(a) * 0.085, Math.cos(a) * 0.085, 0.005, 0, 0, -a, wheel);
-    add(new RoundedBoxGeometry(0.11, 0.09, 0.04, 2, 0.02), dark, 0, 0, 0.005, 0, 0, 0, wheel);
-    add(new THREE.CylinderGeometry(0.025, 0.025, 0.3, 8), dark, 0, 0, 0.15, Math.PI / 2, 0, 0, wheelPivot);
+    // Cockpit for the procedural sports cars. Everything is placed relative to the driver's eye
+    // and, critically, the dash top is kept BELOW the sightline - the old fixed-size dashboard was
+    // built around the imported 458 and rose above the eye in the lower-seated cars, so the
+    // Le Mans prototype showed nothing but sky.
+    const dashTop = eye.y - 0.16;          // highest any forward furniture may reach
+    const dashH = 0.30, dashZ = eye.z + 0.72;
+    add(new RoundedBoxGeometry(1.45, dashH, 0.5, 3, 0.07), leather, 0, dashTop - dashH / 2, dashZ);
+    add(new RoundedBoxGeometry(1.5, 0.05, 0.34, 2, 0.02), alcan, 0, dashTop - 0.01, dashZ - 0.16, -0.22);
+    // instrument binnacle, tucked under the sightline
+    add(new RoundedBoxGeometry(0.46, 0.18, 0.14, 2, 0.04), dark, eye.x, dashTop - 0.07, eye.z + 0.50, 0.26);
+    add(new THREE.PlaneGeometry(0.40, 0.15), dispMat, eye.x, dashTop - 0.06, eye.z + 0.432, 0.26, Math.PI, 0);
+    // centre console
+    add(new RoundedBoxGeometry(0.3, 0.42, 0.5, 2, 0.04), dark, 0, eye.y - 0.46, eye.z + 0.46);
+    // door cards / sills, low enough to sit beside the driver rather than in front
+    for (const sd of [-1, 1]) add(new RoundedBoxGeometry(0.07, 0.36, 1.3, 2, 0.03), leather, sd * 0.76, eye.y - 0.30, eye.z + 0.05);
+    // A pillars: thin, swept back, clear of the forward view
+    for (const sd of [-1, 1]) add(new THREE.BoxGeometry(0.07, 0.75, 0.07), dark, sd * 0.72, eye.y + 0.26, eye.z + 0.82, 0.6, 0, sd * 0.2);
+    add(new RoundedBoxGeometry(1.5, 0.1, 0.22, 2, 0.03), dark, 0, eye.y + 0.5, eye.z + 0.5);
+    // rear-view mirror, above the sightline
+    add(new RoundedBoxGeometry(0.3, 0.1, 0.03, 2, 0.01), dark, 0, eye.y + 0.34, eye.z + 0.55, -0.15);
+    const mir = add(new THREE.PlaneGeometry(0.27, 0.08), mirrorMat, 0, eye.y + 0.34, eye.z + 0.53, -0.15, Math.PI, 0);
+    // wheel, sized down and set below the dash top
+    wheelPivot.position.set(eye.x, dashTop - 0.10, eye.z + 0.44); wheelPivot.rotation.x = 0.34;
+    add(new THREE.TorusGeometry(0.15, 0.021, 10, 32), alcan, 0, 0, 0, 0, 0, 0, wheel);
+    for (const a of [0, 2.1, -2.1]) add(new THREE.BoxGeometry(0.028, 0.15, 0.02), dark, Math.sin(a) * 0.075, Math.cos(a) * 0.075, 0.005, 0, 0, -a, wheel);
+    add(new RoundedBoxGeometry(0.1, 0.08, 0.04, 2, 0.02), dark, 0, 0, 0.005, 0, 0, 0, wheel);
+    add(new THREE.CylinderGeometry(0.022, 0.022, 0.26, 8), dark, 0, 0, 0.13, Math.PI / 2, 0, 0, wheelPivot);
     cp.userData.mirrorObjs = [mir];
   } else {
     // F1 — the car body is already around us; add wheel, padding, mirrors

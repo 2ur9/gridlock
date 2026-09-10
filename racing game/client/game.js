@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import * as THREE from 'three';
-import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=19';
+import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=31';
 
 /* ---------- error surface ---------------------------------------------------- */
 const errBox = document.getElementById('err');
@@ -101,11 +101,18 @@ const MODES = {
   gt: { id: 'gt', car: 'gt', cars: ['gt', 'gt3', 'hyper', 'lmh'], label: 'GT / Sports', tyreWear: 0.45, fuel: 0.30, drs: false },
 };
 
+// pace is a fraction of what the car can REALLY do, so 1.0 is on the limit, not beyond it.
+// The rest is craft: how far ahead they look, how hard they can brake, how tightly they hold
+// the line, how quickly they react, and how rarely/mildly they err.
 const DIFF = {
-  easy:   { label: 'Easy',   pace: 0.845, mistake: 0.55, aggr: 0.25, defend: 0.2 },
-  medium: { label: 'Medium', pace: 0.925, mistake: 0.24, aggr: 0.55, defend: 0.5 },
-  hard:   { label: 'Hard',   pace: 0.985, mistake: 0.09, aggr: 0.82, defend: 0.8 },
-  pro:    { label: 'Pro',    pace: 1.03,  mistake: 0.03, aggr: 1.0,  defend: 1.0 },
+  easy:   { label: 'Easy', topSpeed: 0.6,   pace: 0.66, mistake: 0.40, mistakeSize: 1.00, aggr: 0.25, defend: 0.2,
+            lookahead: 0.50, brakeSkill: 0.55, lineHold: 1.2, reflex: 7,  cornerLift: 0.72 },
+  medium: { label: 'Medium', topSpeed: 0.74, pace: 0.76, mistake: 0.16, mistakeSize: 0.80, aggr: 0.55, defend: 0.5,
+            lookahead: 0.48, brakeSkill: 0.70, lineHold: 1.8, reflex: 10, cornerLift: 0.71 },
+  hard:   { label: 'Hard', topSpeed: 0.88,   pace: 0.84, mistake: 0.05, mistakeSize: 0.55, aggr: 0.85, defend: 0.85,
+            lookahead: 0.46, brakeSkill: 0.82, lineHold: 2.4, reflex: 13, cornerLift: 0.70 },
+  pro:    { label: 'Pro', topSpeed: 1.0,    pace: 0.91, mistake: 0.008, mistakeSize: 0.30, aggr: 1.0, defend: 1.0,
+            lookahead: 0.45, brakeSkill: 0.92, lineHold: 3.0, reflex: 16, cornerLift: 0.70 },
 };
 
 const POINTS = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
@@ -126,12 +133,13 @@ const SEASONS = [
     ],
   },
   {
-    id: 'world', name: 'World Series (5 rounds · Formula)',
+    id: 'world', name: 'World Series (6 rounds · Formula)',
     rounds: [
       { trackId: 'testoval', mode: 'f1', laps: 5 },
       { trackId: 'monza', mode: 'f1', laps: 4 },
       { trackId: 'silverstone', mode: 'f1', laps: 4 },
       { trackId: 'spa', mode: 'f1', laps: 3 },
+      { trackId: 'melbourne', mode: 'f1', laps: 2 },
       { trackId: 'nurburgring', mode: 'f1', laps: 4 },
     ],
   },
@@ -299,6 +307,56 @@ const TRACK_DEFS = {
     scale: 3.0, elevScale: 1.5,
     runoff: 13, sectors: [0.34, 0.66],
     drs: [[0.84, 0.20], [0.22, 0.18], [0.50, 0.16]], gravel: [[0.13, 0.03], [0.42, 0.03]],
+  },
+
+  melbourne: {
+    // Albert Park, Melbourne - full scale (~5.3 km, 14 turns). A flat, fast park circuit:
+    // long pit straight, quick left-right at T1/T2, the sweeping T9-T10 run, and a tight
+    // final complex at T13/T14 back on to the straight. Modelled from the public layout.
+    name: 'Albert Park (inspired)', country: 'Australia', tint: 0x2f7a3f,
+    pts: [
+      [109, -416, 15, 0, 0.0],
+      [-69, -414, 15, 0, 0.52],
+      [-218, -400, 14, 0, 0.98],
+      [-309, -368, 13, 0, 1.34],
+      [-361, -289, 12, 0, 1.55],
+      [-452, -317, 14, 0, 1.59],
+      [-555, -353, 15, 0, 1.47],
+      [-743, -357, 15, 0, 1.18],
+      [-891, -341, 13, 0, 0.76],
+      [-979, -289, 12, 0, 0.26],
+      [-959, -210, 12, 0, -0.26],
+      [-895, -151, 12, 0, -0.76],
+      [-943, -71, 12, 0, -1.18],
+      [-975, 44, 14, 0, -1.47],
+      [-971, 254, 14, 0, -1.59],
+      [-951, 374, 12, 0, -1.55],
+      [-872, 422, 12, 0, -1.34],
+      [-753, 475, 13, 0, -0.98],
+      [-650, 515, 13, 0, -0.52],
+      [-511, 483, 14, 0, -0.0],
+      [-357, 396, 15, 0, 0.52],
+      [-218, 277, 15, 0, 0.98],
+      [-95, 151, 15, 0, 1.34],
+      [40, 24, 14, 0, 1.55],
+      [151, -48, 13, 0, 1.59],
+      [238, -16, 13, 0, 1.47],
+      [261, 55, 13, 0, 1.18],
+      [436, 81, 15, 0, 0.76],
+      [674, 59, 15, 0, 0.26],
+      [895, 2, 14, 0, -0.26],
+      [994, -63, 12, 0, -0.76],
+      [987, -174, 12, 0, -1.18],
+      [915, -297, 12, 0, -1.47],
+      [832, -372, 12, 0, -1.59],
+      [729, -414, 12, 0, -1.55],
+      [626, -428, 13, 0, -1.34],
+      [539, -456, 14, 0, -0.98],
+      [376, -448, 15, 0, -0.52],
+    ],
+    scale: 1, elevScale: 1,
+    runoff: 13, sectors: [0.33, 0.68],
+    drs: [[0.90, 0.14], [0.10, 0.12], [0.50, 0.12]], gravel: [[0.24, 0.03], [0.70, 0.03]],
   },
 
   nurburgring: {
@@ -829,62 +887,123 @@ class AI {
     this.d = DIFF[diffKey] || DIFF.medium;
     this.mistakeT = 0;
     this.offset = 0;
+    this.steerSm = 0;
   }
-  update(dt, track, cars, flags) {
+
+  /** Lateral acceleration this car can actually sustain right now (m/s^2), incl. downforce. */
+  _latCapacity(env) {
+    const c = this.v.cfg, v = this.v.speed;
+    const grip = c.tyre.muPeak * (env?.gripMul ?? 1);
+    const aero = (c.aeroDown * v * v) / c.mass;      // extra g from downforce
+    return grip * (9.81 + aero);
+  }
+
+  update(dt, track, cars, flags, env) {
     const v = this.v;
     const g = track.sample(v.pos.x, v.pos.z, v._hint);
     const speed = v.speed;
+    const N = track.N, step = track.length / N;
+    const d = this.d;
 
-    // find a car close ahead to react to
-    let carAhead = null, gapAhead = 999, carBehind = null, gapBehind = 999;
+    // Corner speeds are precomputed against a reference 15.5 m/s^2. Rescale them to what THIS
+    // car can really do (v scales with sqrt(a)), so "pace" is a fraction of a real limit rather
+    // than a licence to demand more grip than exists and slide off the road.
+    // Evaluate grip at the speed the CORNER is taken at, not the speed we happen to be doing.
+    // Judging a 90 km/h hairpin by the downforce available at 220 km/h is what sent them wide.
+    const cc = v.cfg, gm = env?.gripMul ?? 1;
+    const cornerV = (i) => {
+      const base = track.samples[i % N].tgt;                  // precomputed against 15.5 m/s^2
+      const aero = (cc.aeroDown * base * base) / cc.mass;     // downforce at that corner speed
+      const cap = cc.tyre.muPeak * (9.81 + aero) * gm;
+      return base * Math.sqrt(clamp(cap / 15.5, 0.5, 1.6)) * d.pace;
+    };
+
+    // --- braking: scan far enough ahead to actually stop for the slowest corner in range
+    // Braking capability, reduced when running downhill - gravity is helping the car along.
+    // Ignoring this is why they sailed off at the bottom of Spa's descents.
+    const slope = clamp(v.slopePitch || 0, -0.35, 0.35);   // + = nose down / descending
+    const decelFlat = Math.min(v.cfg.brakeForce / v.cfg.mass, this._latCapacity(env)) * d.brakeSkill;
+    const decel = Math.max(3, decelFlat - 9.81 * Math.sin(slope));
+    let tgt = Infinity;
+    const horizon = Math.min(N - 1, Math.round((8 + (speed * speed) / (2 * decel)) / step) + 2);
+    for (let k = 0; k <= horizon; k++) {
+      const vc = cornerV(g.i + k);
+      const dist = k * step;
+      // fastest we may travel now and still be down to vc by then
+      // plan with a margin: braking flat-out to the theoretical limit means arriving at the
+      // apex still hard on the brakes, which spends the grip needed to turn
+      const allowed = Math.sqrt(Math.max(0, vc * vc + 2 * decel * 0.75 * dist));
+      if (allowed < tgt) tgt = allowed;
+    }
+    if (!isFinite(tgt)) tgt = cornerV(g.i);
+
+    // --- traffic
+    let carAhead = null, gapAhead = 999, carBehind = null;
     for (const o of cars) {
       if (o === v) continue;
       const dx = o.pos.x - v.pos.x, dz = o.pos.z - v.pos.z;
       const fwd = dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw);
       const side = dx * Math.cos(v.yaw) - dz * Math.sin(v.yaw);
       const dist = Math.hypot(dx, dz);
-      if (fwd > 0 && dist < 30 && Math.abs(side) < 6 && dist < gapAhead) { carAhead = o; gapAhead = dist; }
-      if (fwd < 0 && dist < 16 && Math.abs(side) < 5 && dist < gapBehind) { carBehind = o; gapBehind = dist; }
+      if (fwd > 0 && dist < 34 && Math.abs(side) < 5.5 && dist < gapAhead) { carAhead = o; gapAhead = dist; }
+      if (fwd < 0 && dist < 16 && Math.abs(side) < 5) carBehind = o;
     }
 
-    // lateral offset target: racing line, plus overtake / defend nudges
+    // --- where on the road we want to be: racing line, plus overtake / defend nudges
     let wantOffset = 0;
     if (carAhead && carAhead.speed < speed - 1.5) {
-      wantOffset = (this._passSide ||= (Math.random() < 0.5 ? -1 : 1)) * this.d.aggr * 4.2;
+      wantOffset = (this._passSide ||= (Math.random() < 0.5 ? -1 : 1)) * d.aggr * 4.2;
     } else { this._passSide = 0; }
-    if (carBehind && this.d.defend > 0.3) {
+    if (carBehind && d.defend > 0.3) {
       const bside = (carBehind.pos.x - v.pos.x) * Math.cos(v.yaw) - (carBehind.pos.z - v.pos.z) * Math.sin(v.yaw);
-      wantOffset += (bside > 0 ? -1 : 1) * this.d.defend * 2.4;
+      wantOffset += (bside > 0 ? -1 : 1) * d.defend * 2.4;
     }
     this.offset = lerp(this.offset, wantOffset, clamp(dt * 2.5, 0, 1));
 
-    // steering — pure pursuit to a point on the racing line ahead
-    const look = 7 + speed * 0.42;
-    const aim = track.racingAhead(g.i, look).clone();
-    const smAim = track.samples[(g.i + Math.round(look / (track.length / track.N))) % track.N];
-    aim.addScaledVector(smAim.left, this.offset);
+    // --- steering: pure pursuit PLUS a cross-track term that pulls back onto the line.
+    // Without the second term a car that ran wide simply stayed wide for the rest of the lap.
+    const look = clamp(6 + speed * d.lookahead, 6, 55);
+    const ai = (g.i + Math.round(look / step)) % N;
+    const smAim = track.samples[ai];
+    const aim = track.racing[ai].clone().addScaledVector(smAim.left, this.offset);
     const dx = aim.x - v.pos.x, dz = aim.z - v.pos.z;
     const localRight = dx * Math.cos(v.yaw) - dz * Math.sin(v.yaw);
     const localFwd = dx * Math.sin(v.yaw) + dz * Math.cos(v.yaw);
-    let steer = clamp(Math.atan2(localRight, Math.max(2, localFwd)) / (v.maxSteerNow || v.cfg.maxSteer) * 1.15, -1, 1);
+    const pursuit = Math.atan2(localRight, Math.max(2, localFwd));
 
-    // speed control
-    let tgt = track.targetAhead(g.i, 6 + speed * (2.6)) * this.d.pace;
+    const here = track.racing[g.i % N];
+    const lineLat = (here.x - track.samples[g.i % N].pos.x) * g.leftX + (here.z - track.samples[g.i % N].pos.z) * g.leftZ;
+    const crossErr = (lineLat + this.offset) - g.lateral;          // + = line is to our left
+    const steerPursuit = pursuit / (v.maxSteerNow || v.cfg.maxSteer);
+    const steerCorr = clamp(-crossErr * d.lineHold * 0.03, -0.4, 0.4);
+    const rawSteer = clamp(steerPursuit + steerCorr, -1, 1);
+    this.steerSm = lerp(this.steerSm, rawSteer, clamp(dt * d.reflex, 0, 1));
+    let steer = this.steerSm;
+
+    // --- speed limits from flags, traffic, running wide
     if (flags.yellowActive && flags.yellowNear(g.s)) tgt *= 0.72;
-    if (Math.abs(g.lateral) > g.width * 0.5 + 1.2) tgt = Math.min(tgt, 14); // off track: slow down and rejoin
-    if (carAhead && gapAhead < 9 && carAhead.speed < speed) tgt = Math.min(tgt, carAhead.speed + 1.5);
+    if (Math.abs(g.lateral) > g.width * 0.5 + 1.2) tgt = Math.min(tgt, 16);   // off track: gather it up
+    if (carAhead && gapAhead < 10 && carAhead.speed < speed) tgt = Math.min(tgt, carAhead.speed + 1.5);
+    tgt = Math.min(tgt, (v.cfg.topHint || 90) * d.topSpeed);   // lower levels don't wring out the straights
     if (v.fuel <= 0) tgt = 0;
 
     let throttle = 0, brake = 0;
-    if (speed > tgt + 0.6) brake = clamp((speed - tgt) / 7, 0, 1);
-    else throttle = clamp((tgt - speed) / 5 + 0.35, 0, 1);
+    // if we are already turning hard, ask for a lower entry speed still
+    tgt *= 1 - 0.12 * Math.abs(this.steerSm);
+    const err = speed - tgt;
+    if (err > 0.3) brake = clamp(err / 3, 0, 1);       // react firmly, don't dribble into the corner
+    else throttle = clamp(-err / 4 + 0.35, 0, 1);
+    // Ease off the power while still turning hard. This is the single biggest thing keeping
+    // them on the road: cornerLift is how much they back out, 0 = none, 1 = a lot.
+    const turnLoad = Math.abs(steer) * clamp(speed / 40, 0, 1);
+    throttle *= clamp(1 - turnLoad * d.cornerLift, 0.2, 1);
     if (v.tyre < 0.4) throttle *= 0.9;
 
-    // mistakes
-    if (this.mistakeT <= 0 && Math.random() < this.d.mistake * dt) this.mistakeT = 0.25 + Math.random() * 0.6;
-    if (this.mistakeT > 0) { this.mistakeT -= dt; steer += (Math.random() - 0.5) * 0.45; throttle *= 0.55; brake *= 0.7; }
+    // --- mistakes: rarer and smaller as skill rises
+    if (this.mistakeT <= 0 && Math.random() < d.mistake * dt) this.mistakeT = 0.25 + Math.random() * 0.5;
+    if (this.mistakeT > 0) { this.mistakeT -= dt; steer += (Math.random() - 0.5) * 0.35 * d.mistakeSize; throttle *= 0.7; }
 
-    v.setInput({ throttle, brake, steer, handbrake: false });
+    v.setInput({ throttle, brake, steer: clamp(steer, -1, 1), handbrake: false });
   }
 }
 
@@ -1563,7 +1682,7 @@ class Game {
     if (racing || g.raceState === 'countdown') {
       const canDrive = racing;
       g.player.setInput(canDrive ? g.playerInput() : { throttle: 0, brake: 1, steer: 0, handbrake: false });
-      for (const ai of g.ais) { if (canDrive) ai.update(h, g.track, g.cars, { yellowActive: !!g.yellow, yellowNear: (s) => g.yellow && Math.abs(s - g.yellow.s) < 90 }); else ai.v.setInput({ throttle: 0, brake: 1, steer: 0, handbrake: false }); }
+      for (const ai of g.ais) { if (canDrive) ai.update(h, g.track, g.cars, { yellowActive: !!g.yellow, yellowNear: (s) => g.yellow && Math.abs(s - g.yellow.s) < 90 }, g.env); else ai.v.setInput({ throttle: 0, brake: 1, steer: 0, handbrake: false }); }
     }
 
     // step all cars
