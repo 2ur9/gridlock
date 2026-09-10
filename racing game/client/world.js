@@ -252,9 +252,9 @@ export function setupSky(scene, renderer, wet) {
 
   const sun = new THREE.DirectionalLight(0xfff2e0, wet ? 0.9 : 2.6);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.left = -110; sun.shadow.camera.right = 110;
-  sun.shadow.camera.top = 110; sun.shadow.camera.bottom = -110;
+  sun.shadow.mapSize.set(2048, 2048);   // caller lowers this on medium/low
+  sun.shadow.camera.left = -80; sun.shadow.camera.right = 80;
+  sun.shadow.camera.top = 80; sun.shadow.camera.bottom = -80;
   sun.shadow.camera.near = 10; sun.shadow.camera.far = 900;
   sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.04;
   scene.add(sun); scene.add(sun.target);
@@ -565,7 +565,7 @@ export function buildWorld(track, scene, quality, weather) {
 
   /* ---- tyre walls at the tight corners (outside) ---- */
   {
-    const tyreGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.6, 10);
+    const tyreGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.6, 6);
     const tyreMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
     const tyres = new THREE.InstancedMesh(tyreGeo, tyreMat, 9000);
     const cols = [new THREE.Color(0x111111), new THREE.Color(0x111111), new THREE.Color(0xd81f2a), new THREE.Color(0xf2f2f2), new THREE.Color(0x1b4fd8)];
@@ -579,7 +579,7 @@ export function buildWorld(track, scene, quality, weather) {
       const p = sm.pos.clone().addScaledVector(sm.left, side * (wallOff(sm) - 0.75));
       placeInstance(tyres, tk++, p.x, sm.y + 0.8, p.z, 0, 1, 1, 1, cols[(i >> 1) % cols.length]);
     }
-    tyres.count = tk; tyres.castShadow = true; scene.add(tyres);
+    tyres.count = tk; scene.add(tyres);
   }
 
   /* ---- advertising boards on the straights ---- */
@@ -642,8 +642,8 @@ export function buildWorld(track, scene, quality, weather) {
     roof.position.set(0, tiers * 0.55 + 4.2, -tiers * 0.8 - 0.4); roof.rotation.x = -0.12; roof.castShadow = true; g.add(roof);
     for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) { const col = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, tiers * 0.55 + 4.2, 8), new THREE.MeshStandardMaterial({ color: 0x8a9096, metalness: 0.6, roughness: 0.4 })); col.position.set(sx * (len / 2 + 0.8), (tiers * 0.55 + 4.2) / 2, -k * (tiers * 1.6) / 2 - 0.4); g.add(col); }
     // crowd
-    const people = loQ ? 220 : hiQ ? 1500 : 800;
-    const crowd = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.19, 0.55, 3, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), people);
+    const people = loQ ? 120 : hiQ ? 700 : 380;
+    const crowd = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.2, 0.5, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), people);
     const col = new THREE.Color();
     for (let k = 0; k < people; k++) {
       const t = Math.floor(rng() * tiers); const x = (rng() - 0.5) * (len - 2);
@@ -651,7 +651,7 @@ export function buildWorld(track, scene, quality, weather) {
       col.setHSL(rng(), 0.55 + rng() * 0.35, 0.35 + rng() * 0.35);
       placeInstance(crowd, k, x, 0.55 + t * 0.55 + (sitting ? 0.45 : 0.75), -t * 1.6 - 1.0 + (rng() - 0.5) * 0.3, rng() * 0.6 - 0.3, 1, sitting ? 0.8 : 1.15, 1, col);
     }
-    crowd.castShadow = true; g.add(crowd);
+    g.add(crowd);   // crowds never cast shadows: they doubled the shadow pass for no visible gain
     // flags on the roof
     for (let k = 0; k < 5; k++) { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3, 5), postMat); pole.position.set(-len / 2 + 4 + k * (len - 8) / 4, tiers * 0.55 + 5.6, -tiers * 1.6 - 0.4); g.add(pole); const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.7), new THREE.MeshStandardMaterial({ color: [0xd81f2a, 0x1b4fd8, 0xf2a900, 0xffffff, 0x1e6f3b][k], side: THREE.DoubleSide })); flag.position.set(pole.position.x + 0.6, pole.position.y + 1.1, pole.position.z); g.add(flag); }
     const dist = wallOff(sm) + 4.5;
@@ -719,8 +719,8 @@ export function buildWorld(track, scene, quality, weather) {
     const roofDeck = new THREE.Mesh(new THREE.BoxGeometry(len + 1, 0.4, 15), new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.6 })); roofDeck.position.y = 9.2; b.add(roofDeck);
     const rail = new THREE.Mesh(new THREE.BoxGeometry(len, 1.1, 0.08), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })); rail.position.set(0, 9.95, 7.4); b.add(rail);
     // rooftop crowd
-    const roofPeople = loQ ? 60 : 260;
-    const rc = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.19, 0.55, 3, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), roofPeople);
+    const roofPeople = loQ ? 40 : 130;
+    const rc = new THREE.InstancedMesh(new THREE.CapsuleGeometry(0.2, 0.5, 1, 4), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }), roofPeople);
     const col = new THREE.Color();
     for (let k = 0; k < roofPeople; k++) { col.setHSL(rng(), 0.6, 0.5); placeInstance(rc, k, (rng() - 0.5) * (len - 4), 9.95, 4 + rng() * 3, rng() * 6, 1, 1.1, 1, col); }
     b.add(rc);
@@ -812,11 +812,11 @@ export function buildWorld(track, scene, quality, weather) {
       tmpCol.setHSL(0.24 + rng() * 0.09, 0.45 + rng() * 0.3, 0.32 + rng() * 0.22);
       placeInstance(meshes[kind], counts[kind]++, p.x, groundY(p.x, p.z) - 0.2, p.z, rng() * TAU, w, h, w, tmpCol);
     }
-    meshes.forEach((m, k) => { m.count = counts[k]; m.castShadow = !loQ; scene.add(m); });
+    meshes.forEach((m, k) => { m.count = counts[k]; m.castShadow = hiQ; scene.add(m); });
 
     // bushes just behind the fence
     const bushN = Math.round((loQ ? 150 : 700) * lenScale);
-    const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), bushN);
+    const bushes = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true }), bushN);
     for (let k = 0; k < bushN; k++) {
       const i = Math.floor(rng() * N); const sm = S[i]; const side = rng() < 0.5 ? 1 : -1;
       const p = sm.pos.clone().addScaledVector(sm.left, side * (wallOff(sm) + rb(rng, 2.2, 6)));
@@ -1342,7 +1342,7 @@ export const CarFactory = {
         const wrap = new THREE.Group(); wrap.add(model);
         wrap.updateMatrixWorld(true);
         this.gtBox = new THREE.Box3().setFromObject(wrap);
-        model.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = false; } });
+        model.traverse((m) => { if (m.isMesh) { m.castShadow = /^(body|wheel|tire|rim)/.test(m.name || ''); m.receiveShadow = false; } });
         this.gtTemplate = wrap;
       } catch (e) { console.warn('[cars] GLTF unavailable, using procedural GT:', e.message); }
     })();

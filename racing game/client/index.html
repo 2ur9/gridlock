@@ -320,6 +320,7 @@
       <h1>Settings</h1>
       <div class="grid">
         <label class="field" style="flex-direction:row;align-items:center;gap:8px"><input type="checkbox" id="stSound" style="width:auto" /> Sound <span class="tag">off by default · <span class="kbd">M</span> toggles</span></label>
+        <label class="field">Camera shake <span class="tag">0 = rock steady</span><input type="range" id="stShake" min="0" max="100" value="0" /></label>
         <label class="field">Brake strength <span class="tag">lower = easier to trail into corners</span><input type="range" id="stBrakeMax" min="40" max="100" value="80" /></label>
         <label class="field">Brake build-up <span class="tag">how long holding the key takes to reach full</span><input type="range" id="stBrakeRamp" min="0" max="100" value="60" /></label>
         <label class="field">Master volume<input type="range" id="stVol" min="0" max="100" value="70" /></label>
@@ -368,6 +369,6 @@
   "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
 } }
 </script>
-<script type="module" src="./game.js?v=14"></script>
+<script type="module" src="./game.js?v=19"></script>
 </body>
 </html>

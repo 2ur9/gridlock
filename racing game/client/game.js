@@ -6,7 +6,7 @@
    ========================================================================== */
 
 import * as THREE from 'three';
-import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=14';
+import { setupSky, buildWorld, CarFactory, buildCockpit, drawDisplay } from './world.js?v=19';
 
 /* ---------- error surface ---------------------------------------------------- */
 const errBox = document.getElementById('err');
@@ -484,19 +484,30 @@ class Track {
     }
     this._lastHint = best;
     const sm = S[best];
-    const dx = x - sm.pos.x, dz = z - sm.pos.z;
-    const lateral = dx * sm.left.x + dz * sm.left.z;   // + = left
-    // height: interpolate along the track between neighbouring samples (matches the road mesh),
-    // otherwise a car on a 10° climb would step up 30 cm every sample
-    const along = dx * sm.tan.x + dz * sm.tan.z;
-    const nb = along >= 0 ? S[(best + 1) % N] : S[(best - 1 + N) % N];
-    const seg = Math.max(0.1, sm.pos.distanceTo(nb.pos));
-    const grade = (nb.y - sm.y) / seg;
+    const along0 = (x - sm.pos.x) * sm.tan.x + (z - sm.pos.z) * sm.tan.z;
+    // Blend continuously between the two bracketing samples. Reading banking / width / the
+    // lateral basis straight off the NEAREST sample made every one of them jump each time the
+    // nearest index flipped - ~10 times a second at speed, which is the shake you feel.
+    const a = along0 >= 0 ? sm : S[(best - 1 + N) % N];
+    const b = along0 >= 0 ? S[(best + 1) % N] : sm;
+    const seg = Math.max(0.1, a.pos.distanceTo(b.pos));
+    const t = clamp(along0 >= 0 ? along0 / seg : 1 + along0 / seg, 0, 1);
+    const lx = lerp(a.left.x, b.left.x, t), lz = lerp(a.left.z, b.left.z, t);
+    const ln = Math.hypot(lx, lz) || 1;
+    const leftX = lx / ln, leftZ = lz / ln;
+    const px = lerp(a.pos.x, b.pos.x, t), pz = lerp(a.pos.z, b.pos.z, t);
+    const lateral = (x - px) * leftX + (z - pz) * leftZ;   // + = left
+    const width = lerp(a.width, b.width, t);
+    const bank = lerp(a.bank, b.bank, t);
+    const baseY = lerp(a.y, b.y, t);
+    const tanX = lerp(a.tan.x, b.tan.x, t), tanZ = lerp(a.tan.z, b.tan.z, t);
     return {
-      i: best, s: sm.s, lateral, width: sm.width, curv: sm.curv, tgt: sm.tgt,
-      groundY: sm.y + grade * Math.abs(along) + Math.sin(sm.bank) * clamp(lateral, -sm.width * 0.5, sm.width * 0.5),
-      leftX: sm.left.x, leftZ: sm.left.z, tanYaw: Math.atan2(sm.tan.x, sm.tan.z),
-      bank: sm.bank,
+      // b.s wraps to 0 at the start/finish line; extend it so `s` never runs backwards mid-blend
+      i: best, s: lerp(a.s, b.s >= a.s ? b.s : a.s + seg, t) % this.length,
+      lateral, width, curv: lerp(a.curv, b.curv, t), tgt: lerp(a.tgt, b.tgt, t),
+      groundY: baseY + Math.sin(bank) * clamp(lateral, -width * 0.5, width * 0.5),
+      leftX, leftZ, tanYaw: Math.atan2(tanX, tanZ),
+      bank,
     };
   }
 
@@ -769,7 +780,12 @@ class Vehicle {
 
     // ground height follow: road surface incl. banking, +3 cm of tarmac, kerbs a touch higher
     const g3 = track.sample(this.pos.x, this.pos.z, this._hint);
-    const gY = g3.groundY + (surf.kind === 'curb' ? 0.06 : surf.kind === 'tarmac' ? 0.03 : 0);
+    // Ride height blends with lateral position instead of snapping per surface type: straddling
+    // the tarmac/kerb edge used to step the car 3 cm every frame, which is felt as a shake.
+    const aL = Math.abs(g3.lateral), hwR = g3.width * 0.5;
+    const onKerb = smoothstep(hwR - 0.3, hwR + 0.5, aL) * (1 - smoothstep(hwR + 1.1, hwR + 1.9, aL));
+    const onSealed = 1 - smoothstep(hwR + 1.1, hwR + 2.0, aL);
+    const gY = g3.groundY + 0.03 * onSealed + 0.03 * onKerb;
     this.pos.y = gY;   // exact: any smoothing here lags on Spa's climbs and buries the tyres
 
     // road gradient & banking under the car -> the body follows the road (no more nose in the hill)
@@ -994,7 +1010,7 @@ class CameraRig {
       // head motion: engine vibration + speed buzz, g-force lean
       this._t = (this._t || 0) + dt;
       const rpmN = car.cfg ? (car.rpm - car.cfg.idleRPM) / (car.cfg.redline - car.cfg.idleRPM) : 0;
-      const vib = 0.0025 * rpmN + 0.0015 * clamp(speed / 60, 0, 1);
+      const vib = (0.0008 * rpmN + 0.0005 * clamp(speed / 60, 0, 1)) * (Store.settings().shake ?? 1);
       p.y += Math.sin(this._t * 91) * vib; p.x += Math.sin(this._t * 67) * vib * 0.6;
       this.cam.position.copy(p);
       const look = p.clone().addScaledVector(fwd, 40).addScaledVector(up, -0.35 - car._ax * 0.05);
@@ -1135,7 +1151,7 @@ const Store = {
   saveGhost(track, mode, frames) { this.local.set(`ghost.${track}.${mode}`, frames); },
 
   settings() {
-    return this.local.get('settings', { vol: 70, cam: 'chase', units: 'kmh', qual: 'med', shadows: true, assist: true, brakeMax: 80, brakeRamp: 60 });
+    return this.local.get('settings', { vol: 70, cam: 'chase', units: 'kmh', qual: 'med', shadows: true, assist: true, brakeMax: 80, brakeRamp: 60, shake: 0 });
   },
   saveSettings(s) { this.local.set('settings', s); },
 };
@@ -1254,7 +1270,7 @@ class Game {
   constructor() {
     this.view = $('view');
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this._applyPixelRatio();
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1278,7 +1294,14 @@ class Game {
     this.renderer.setAnimationLoop(() => this._frame());
   }
 
+  _applyPixelRatio() {
+    const q = Store.settings().qual;
+    const cap = q === 'high' ? 2 : q === 'low' ? 1 : 1.5;
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, cap));
+  }
+
   _resize() {
+    this._applyPixelRatio();
     this.renderer.setSize(innerWidth, innerHeight);
     this.camera.aspect = innerWidth / innerHeight;
     this.camera.updateProjectionMatrix();
@@ -1356,6 +1379,7 @@ class Game {
     const st = Store.settings();
     const quality = st.qual === 'high' ? 'high' : st.qual === 'low' ? 'low' : 'med';
     this.renderer.shadowMap.enabled = !!st.shadows && quality !== 'low';
+    this._applyPixelRatio();
 
     this.sessionType = sessionType;
     this.settings = { laps: 3, aiCount: 0, aiDifficulty: 'medium', weather: 'dry', mode: 'gt', practice: false, ...settings };
@@ -1396,7 +1420,9 @@ class Game {
     this.ais = [];
     for (let k = 0; k < aiN; k++) {
       // mixed grid in the sports classes so it looks like a real multi-class field
-      const aiCar = modeCfg.cars.length > 1 ? modeCfg.cars[(k + 1) % modeCfg.cars.length] : carId;
+      // AI never take the heavy imported GT model - a full grid of them costs ~200k triangles each
+      const aiPool = modeCfg.cars.filter((c) => c !== 'gt');
+      const aiCar = aiPool.length ? aiPool[k % aiPool.length] : carId;
       const v = new Vehicle(CARS[aiCar], { assist: true }); v.carId = aiCar;
       v.name = AI_NAMES[k % AI_NAMES.length];
       v.livery = { base: AI_COLORS[k % AI_COLORS.length], accent: '#ffffff', pattern: k % 2 ? 'stripe' : 'solid', number: k + 2 };
@@ -1438,7 +1464,7 @@ class Game {
     this.flag = null; this.yellow = null; this._finTimer = 0; this._lastCount = null;
     this.finishOrder = [];
     for (const c of this.cars) {
-      c.lap = 0; c.started = false; c.lastS = track.sample(c.pos.x, c.pos.z, c._hint).s;
+      c.lap = 0; c.started = false; c.lapDist = 0; c.lastS = track.sample(c.pos.x, c.pos.z, c._hint).s;
       c.lapStart = 0; c.bestLap = null; c.lastLap = null; c.sector = 0; c.sectorT = [null, null, null];
       c.lapValid = true; c.offViol = 0; c.penalty = 0; c.retired = false; c.finished = false;
       c.raceProgress = -1 + c.lastS / track.length;
@@ -1507,6 +1533,7 @@ class Game {
       const H = 1 / 120;
       let steps = 0;
       while (this.acc >= H && steps < 8) { this._physics(H); this.acc -= H; steps += 1; }
+      if (this.acc > 0.2) this.acc = 0;   // dropped frames must not compound into slow motion
       this._postSim(dt);
     }
     if (this.scene) this.renderer.render(this.scene, this.camera);
@@ -1611,6 +1638,11 @@ class Game {
     const g = this.track.sample(c.pos.x, c.pos.z, c._hint);
     const L = this.track.length;
     const prev = c.lastS, cur = g.s;
+    // Net distance actually driven forward this lap. A raw line crossing is not enough:
+    // reversing over the line and coming back gives the same high->low wrap as a real lap.
+    let ds = cur - prev;
+    if (ds > L * 0.5) ds -= L; else if (ds < -L * 0.5) ds += L;
+    if (Math.abs(ds) < L * 0.25) c.lapDist = (c.lapDist || 0) + ds;   // ignore teleports/respawns
     // sector splits
     for (let k = 0; k < this.track.sectorS.length; k++) {
       const ss = this.track.sectorS[k];
@@ -1627,10 +1659,12 @@ class Game {
         // leaving the grid — this begins lap 1, nothing to time yet
         c.started = true;
         c.lapStart = this.raceClock;
+        c.lapDist = 0;
         c.lapValid = true; c.sectorT = [null, null, null];
         if (c === this.player && this.sessionType === 'tt') this.recFrames = [];
-      } else if ((this.raceClock - c.lapStart) < 6) {
-        // shoved back and forth across the line (grid contact, spins): not a lap
+      } else if (c.lapDist < L * 0.9) {
+        // crossed the line without having driven a lap: reversing back over it, or being
+        // shoved to and fro on the grid. Not a lap.
       } else {
         const lapMs = (this.raceClock - c.lapStart) * 1000;
         c.lastLap = lapMs;
@@ -1657,6 +1691,7 @@ class Game {
         }
         c.lap += 1;
         c.lapStart = this.raceClock;
+        c.lapDist = 0;
         c.lapValid = true; c.offViol = 0;
         c.sectorT = [null, null, null];
         if (c === this.player && this.sessionType === 'tt') this.recFrames = [];
@@ -1804,7 +1839,7 @@ class Game {
           });
         }
         this._mirT = (this._mirT || 0) + 1;
-        if (this._mirT % 2 === 0 && Store.settings().qual !== 'low') {
+        if (this._mirT % 3 === 0 && Store.settings().qual !== 'low') {
           const m = cp.userData.mirror;
           const eye = cp.userData.eye.clone(); (this.player.mesh.userData.inner || this.player.mesh).localToWorld(eye);
           const fwd = new THREE.Vector3(Math.sin(this.player.yaw), 0, Math.cos(this.player.yaw));
@@ -2162,6 +2197,7 @@ const UI = {
   loadSettings() {
     const s = Store.settings();
     $('stSound').checked = !GAME.audio.muted;
+    $('stShake').value = Math.round((s.shake ?? 0) * 100);
     $('stBrakeMax').value = s.brakeMax ?? 80; $('stBrakeRamp').value = s.brakeRamp ?? 60;
     $('stVol').value = s.vol; $('stCam').value = s.cam; $('stUnits').value = s.units;
     $('stQual').value = s.qual; $('stShadows').checked = s.shadows; $('stAssist').checked = s.assist;
@@ -2170,7 +2206,7 @@ const UI = {
     const s = {
       vol: +$('stVol').value, cam: $('stCam').value, units: $('stUnits').value,
       qual: $('stQual').value, shadows: $('stShadows').checked, assist: $('stAssist').checked,
-      brakeMax: +$('stBrakeMax').value, brakeRamp: +$('stBrakeRamp').value,
+      brakeMax: +$('stBrakeMax').value, brakeRamp: +$('stBrakeRamp').value, shake: +$('stShake').value / 100,
       lastDiff: Store.settings().lastDiff,
     };
     Store.saveSettings(s);
